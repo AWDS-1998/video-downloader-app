@@ -588,7 +588,7 @@ function extractDirectUrls(url, options = {}) {
       '--no-warnings',
       '--no-download',
       '--no-playlist',
-      '--remote-components', 'ejs:github',
+      '--extractor-args', 'youtube:player_client=ios,android,mweb',
     ];
 
     // استخدام ملف الكوكيز المحلي تلقائياً
@@ -598,14 +598,13 @@ function extractDirectUrls(url, options = {}) {
 
     // تحديد الصيغة حسب النوع والجودة
     if (type === 'audio') {
-      args.push('-f', 'bestaudio');
+      args.push('-f', 'bestaudio[ext=m4a]/bestaudio/best');
     } else {
       if (quality === 'best' || !quality) {
-        args.push('-f', 'bestvideo+bestaudio/best');
-      } else if (/^\d+$/.test(quality) && parseInt(quality) >= 144) {
-        args.push('-f', `bestvideo[height<=${quality}]+bestaudio/best[height<=${quality}]`);
+        // نطلب الصيغ المدمجة (combined) لتسهيل التحميل المباشر على الجوال بدون merge
+        args.push('-f', 'best[ext=mp4]/best');
       } else {
-        args.push('-f', `${quality}+bestaudio/${quality}/best`);
+        args.push('-f', `best[height<=${quality}][ext=mp4]/best[height<=${quality}]/best`);
       }
     }
 

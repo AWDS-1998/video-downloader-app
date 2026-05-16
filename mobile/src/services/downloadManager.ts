@@ -5,7 +5,7 @@
  * يحل مشكلة حجب IP السيرفر من YouTube
  */
 
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as MediaLibrary from 'expo-media-library';
 import api from './api';
 
@@ -91,18 +91,19 @@ class DownloadManagerClass {
         options.type
       );
 
-      if (!extracted.directUrls || extracted.directUrls.length === 0) {
-        throw new Error('لم يتم العثور على رابط تحميل');
+      if (!extracted || !extracted.directUrls || extracted.directUrls.length === 0) {
+        throw new Error('لم يتم العثور على رابط تحميل صالح لهذه الجودة');
       }
 
-      const bestUrl = extracted.directUrls.find((u: any) => u.type === 'combined')
+      // البحث عن أفضل رابط مدمج (فيديو + صوت) لتجنب الحاجة لدمجهما على الجوال
+      const bestUrl = extracted.directUrls.find((u: any) => u.ext === 'mp4')
         || extracted.directUrls[0];
 
-      const ext = bestUrl.ext || (options.type === 'audio' ? 'mp3' : 'mp4');
+      const ext = bestUrl.ext || (options.type === 'audio' ? 'm4a' : 'mp4');
       const sanitizedTitle = (extracted.title || options.title || 'video')
-        .replace(/[^\w\s\u0600-\u06FF.-]/g, '')
-        .substring(0, 80);
-      const filename = `${sanitizedTitle}.${ext}`;
+        .replace(/[^\w\s\u0600-\u06FF.-]/g, '_')
+        .substring(0, 50);
+      const filename = `${sanitizedTitle}_${Date.now() % 10000}.${ext}`;
 
       task.filename = filename;
       task.filesize = bestUrl.filesize || 0;
