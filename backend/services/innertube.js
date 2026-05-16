@@ -91,130 +91,167 @@ function fetchJSON(url, options = {}) {
 
 /**
  * جلب بيانات الفيديو عبر InnerTube Player API
+ * يجرب عدة clients: WEB (للبيانات الوصفية) ثم ANDROID (للروابط)
  * هذا أسرع بـ 10-50 مرة من yt-dlp
  */
 async function getVideoInfoFast(videoId) {
-  const client = CLIENTS.ANDROID;
-
-  const body = {
-    videoId,
-    context: {
-      client: {
-        clientName: client.clientName,
-        clientVersion: client.clientVersion,
-        androidSdkVersion: client.androidSdkVersion,
-        hl: 'ar',
-        gl: 'SA',
-      },
-    },
-    contentCheckOk: true,
-    racyCheckOk: true,
-  };
-
-  const url = `https://www.youtube.com/youtubei/v1/player?key=${client.apiKey}&prettyPrint=false`;
-
   logInfo(`[InnerTube] Fetching video info for: ${videoId}`);
   const startTime = Date.now();
 
-  try {
-    const data = await fetchJSON(url, {
-      body,
-      headers: {
-        'User-Agent': client.userAgent,
-        'X-YouTube-Client-Name': '3', // ANDROID
-        'X-YouTube-Client-Version': client.clientVersion,
-      },
-    });
+  // نجرب كل الـ clients بالترتيب حتى نحصل على نتيجة كاملة
+  const clientConfigs = [
+    {
+      client: CLIENTS.WEB,
+      clientNameId: '1',
+      contextExtra: {},
+    },
+    {
+      client: CLIENTS.ANDROID,
+      clientNameId: '3',
+      contextExtra: { androidSdkVersion: CLIENTS.ANDROID.androidSdkVersion },
+    },
+  ];
 
-    const elapsed = Date.now() - startTime;
-    logInfo(`[InnerTube] Got response in ${elapsed}ms`);
+  let bestData = null;
+  let lastError = null;
 
-    if (data.playabilityStatus && data.playabilityStatus.status !== 'OK') {
-      const reason = data.playabilityStatus.reason || data.playabilityStatus.status;
-      throw new Error(`Video unavailable: ${reason}`);
-    }
+  for (const config of clientConfigs) {
+    try {
+      const body = {
+        videoId,
+        context: {
+          client: {
+            clientName: config.client.clientName,
+            clientVersion: config.client.clientVersion,
+            ...config.contextExtra,
+            hl: 'ar',
+            gl: 'SA',
+          },
+        },
+        contentCheckOk: true,
+        racyCheckOk: true,
+      };
 
-    const videoDetails = data.videoDetails || {};
-    const streamingData = data.streamingData || {};
+      const apiUrl = `https://www.youtube.com/youtubei/v1/player?key=${config.client.apiKey}&prettyPrint=false`;
 
-    // استخراج الصيغ المتاحة
-    const formats = [];
-    const allFormats = [
-      ...(streamingData.formats || []),
-      ...(streamingData.adaptiveFormats || []),
-    ];
-
-    for (const f of allFormats) {
-      const isVideo = f.mimeType && f.mimeType.startsWith('video/');
-      const isAudio = f.mimeType && f.mimeType.startsWith('audio/');
-
-      formats.push({
-        formatId: String(f.itag),
-        ext: isVideo ? 'mp4' : (isAudio ? 'webm' : 'mp4'),
-        resolution: f.qualityLabel || (isAudio ? 'audio only' : 'unknown'),
-        height: f.height || 0,
-        width: f.width || 0,
-        fps: f.fps || 0,
-        filesize: parseInt(f.contentLength || '0'),
-        vcodec: isVideo ? (f.mimeType || '').split(';')[0] : 'none',
-        acodec: isAudio ? (f.mimeType || '').split(';')[0] : (f.audioQuality ? 'yes' : 'none'),
-        isAudioOnly: isAudio && !isVideo,
-        isVideoOnly: isVideo && (!f.audioQuality),
-        note: f.qualityLabel || f.quality || '',
-        // رابط التحميل المباشر (هذا هو السر!)
-        url: f.url || null,
-        bitrate: f.bitrate || 0,
-        audioQuality: f.audioQuality || null,
+      const data = await fetchJSON(apiUrl, {
+        body,
+        headers: {
+          'User-Agent': config.client.userAgent || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'X-YouTube-Client-Name': config.clientNameId,
+          'X-YouTube-Client-Version': config.client.clientVersion,
+        },
       });
+
+      // تحقق من صلاحية البيانات
+      if (data.videoDetails && data.videoDetails.title) {
+        bestData = data;
+        logInfo(`[InnerTube] Success with ${config.client.clientName} client`);
+        break; // حصلنا على بيانات كاملة
+      }
+
+      // إذا حصلنا على streaming data بدون عنوان، نحفظها كاحتياط
+      if (data.streamingData && !bestData) {
+        bestData = data;
+      }
+    } catch (err) {
+      lastError = err;
+      logInfo(`[InnerTube] ${config.client.clientName} failed: ${err.message}`);
     }
-
-    const result = {
-      id: videoDetails.videoId || videoId,
-      title: videoDetails.title || 'Unknown',
-      description: (videoDetails.shortDescription || '').substring(0, 500),
-      thumbnail: videoDetails.thumbnail?.thumbnails?.pop()?.url || '',
-      duration: parseInt(videoDetails.lengthSeconds || '0'),
-      durationString: formatDuration(parseInt(videoDetails.lengthSeconds || '0')),
-      uploader: videoDetails.author || 'Unknown',
-      channelId: videoDetails.channelId || '',
-      uploadDate: '',
-      viewCount: parseInt(videoDetails.viewCount || '0'),
-      likeCount: 0,
-      extractor: 'youtube',
-      url: `https://www.youtube.com/watch?v=${videoId}`,
-      filesize: 0,
-      formats,
-      subtitles: [],
-      automaticCaptions: [],
-      // البيانات الإضافية للتحميل المباشر
-      streamingData: {
-        expiresInSeconds: streamingData.expiresInSeconds || '21540',
-        formats: (streamingData.formats || []).map(f => ({
-          itag: f.itag,
-          url: f.url,
-          mimeType: f.mimeType,
-          qualityLabel: f.qualityLabel,
-          contentLength: f.contentLength,
-        })),
-        adaptiveFormats: (streamingData.adaptiveFormats || []).map(f => ({
-          itag: f.itag,
-          url: f.url,
-          mimeType: f.mimeType,
-          qualityLabel: f.qualityLabel || null,
-          contentLength: f.contentLength,
-          bitrate: f.bitrate,
-          audioQuality: f.audioQuality || null,
-        })),
-      },
-      _fetchedIn: `${elapsed}ms`,
-      _source: 'innertube',
-    };
-
-    return result;
-  } catch (error) {
-    logError(`[InnerTube] Failed: ${error.message}`);
-    throw error;
   }
+
+  if (!bestData) {
+    throw lastError || new Error('All InnerTube clients failed');
+  }
+
+  const elapsed = Date.now() - startTime;
+  logInfo(`[InnerTube] Got response in ${elapsed}ms`);
+
+  const videoDetails = bestData.videoDetails || {};
+  const streamingData = bestData.streamingData || {};
+
+  // إذا الفيديو غير متاح
+  if (bestData.playabilityStatus && bestData.playabilityStatus.status === 'ERROR') {
+    const reason = bestData.playabilityStatus.reason || 'Video unavailable';
+    throw new Error(reason);
+  }
+
+  // استخراج الصيغ المتاحة
+  const formats = [];
+  const allFormats = [
+    ...(streamingData.formats || []),
+    ...(streamingData.adaptiveFormats || []),
+  ];
+
+  for (const f of allFormats) {
+    const isVideo = f.mimeType && f.mimeType.startsWith('video/');
+    const isAudio = f.mimeType && f.mimeType.startsWith('audio/');
+
+    formats.push({
+      formatId: String(f.itag),
+      ext: isVideo ? 'mp4' : (isAudio ? 'webm' : 'mp4'),
+      resolution: f.qualityLabel || (isAudio ? 'audio only' : 'unknown'),
+      height: f.height || 0,
+      width: f.width || 0,
+      fps: f.fps || 0,
+      filesize: parseInt(f.contentLength || '0'),
+      vcodec: isVideo ? (f.mimeType || '').split(';')[0] : 'none',
+      acodec: isAudio ? (f.mimeType || '').split(';')[0] : (f.audioQuality ? 'yes' : 'none'),
+      isAudioOnly: isAudio && !isVideo,
+      isVideoOnly: isVideo && (!f.audioQuality),
+      note: f.qualityLabel || f.quality || '',
+      url: f.url || null,
+      bitrate: f.bitrate || 0,
+      audioQuality: f.audioQuality || null,
+    });
+  }
+
+  // استخراج الصورة المصغرة بأعلى جودة
+  const thumbnails = videoDetails.thumbnail?.thumbnails || [];
+  const bestThumbnail = thumbnails.length > 0 ? thumbnails[thumbnails.length - 1].url : '';
+
+  const result = {
+    id: videoDetails.videoId || videoId,
+    title: videoDetails.title || 'Unknown',
+    description: (videoDetails.shortDescription || '').substring(0, 500),
+    thumbnail: bestThumbnail,
+    duration: parseInt(videoDetails.lengthSeconds || '0'),
+    durationString: formatDuration(parseInt(videoDetails.lengthSeconds || '0')),
+    uploader: videoDetails.author || 'Unknown',
+    channelId: videoDetails.channelId || '',
+    uploadDate: '',
+    viewCount: parseInt(videoDetails.viewCount || '0'),
+    likeCount: 0,
+    extractor: 'youtube',
+    url: `https://www.youtube.com/watch?v=${videoId}`,
+    filesize: 0,
+    formats,
+    subtitles: [],
+    automaticCaptions: [],
+    streamingData: {
+      expiresInSeconds: streamingData.expiresInSeconds || '21540',
+      formats: (streamingData.formats || []).map(f => ({
+        itag: f.itag,
+        url: f.url,
+        mimeType: f.mimeType,
+        qualityLabel: f.qualityLabel,
+        contentLength: f.contentLength,
+      })),
+      adaptiveFormats: (streamingData.adaptiveFormats || []).map(f => ({
+        itag: f.itag,
+        url: f.url,
+        mimeType: f.mimeType,
+        qualityLabel: f.qualityLabel || null,
+        contentLength: f.contentLength,
+        bitrate: f.bitrate,
+        audioQuality: f.audioQuality || null,
+      })),
+    },
+    _fetchedIn: `${elapsed}ms`,
+    _source: 'innertube',
+  };
+
+  return result;
 }
 
 /**
