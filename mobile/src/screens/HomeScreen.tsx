@@ -90,7 +90,7 @@ export const HomeScreen: React.FC = () => {
     ?.sort((a, b) => b - a) || [];
 
   const isActive = currentTask &&
-    ['starting', 'downloading', 'saving'].includes(currentTask.status);
+    ['extracting', 'downloading', 'saving'].includes(currentTask.status);
 
   return (
     <GradientBackground>
@@ -169,9 +169,9 @@ export const HomeScreen: React.FC = () => {
           {currentTask && (
             <View style={styles.progressSection}>
               <Text style={styles.sectionTitle}>
-                {currentTask.status === 'starting' ? '🚀 جاري البدء...' :
+                {currentTask.status === 'extracting' ? '🔗 جاري تحضير الرابط...' :
                  currentTask.status === 'downloading' ? '📥 جاري التحميل...' :
-                 currentTask.status === 'saving' ? '💾 جاري الحفظ...' :
+                 currentTask.status === 'saving' ? '💾 جاري الحفظ في المعرض...' :
                  currentTask.status === 'completed' ? '✅ اكتمل التحميل!' :
                  currentTask.status === 'error' ? '❌ فشل التحميل' :
                  currentTask.status === 'cancelled' ? '🚫 تم الإلغاء' :

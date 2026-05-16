@@ -1,15 +1,14 @@
 /**
- * Download Manager - مدير التحميل
- * يستخدم السيرفر للتحميل + WebSocket لمتابعة التقدم
- * عند الاكتمال يحفظ الملف في الجوال
+ * Download Manager - مدير التحميل المحسّن
+ * 
+ * المسار: السيرفر يستخرج رابط CDN → الجوال يحمّل مباشرة
+ * يحل مشكلة حجب IP السيرفر من YouTube
  */
 
 import * as FileSystem from 'expo-file-system';
 import * as MediaLibrary from 'expo-media-library';
 import api from './api';
-import wsService from './websocket';
 
-// أنواع البيانات
 export interface DownloadTask {
   id: string;
   title: string;
@@ -18,17 +17,16 @@ export interface DownloadTask {
   filesize: number;
   quality: string;
   type: 'video' | 'audio';
-  status: 'pending' | 'starting' | 'downloading' | 'saving' | 'completed' | 'error' | 'cancelled';
-  progress: number;           // 0-100
+  status: 'pending' | 'extracting' | 'downloading' | 'saving' | 'completed' | 'error' | 'cancelled';
+  progress: number;
   downloadedBytes: number;
-  speed: number;              // bytes/sec
+  speed: number;
   speedText: string;
   eta: string;
   error?: string;
   localPath?: string;
   thumbnail?: string;
   startedAt: number;
-  serverDownloadId?: string;  // ID التحميل على السيرفر
 }
 
 type ProgressCallback = (task: DownloadTask) => void;
@@ -36,51 +34,9 @@ type ProgressCallback = (task: DownloadTask) => void;
 class DownloadManagerClass {
   private tasks: Map<string, DownloadTask> = new Map();
   private progressCallbacks: Set<ProgressCallback> = new Set();
-  private wsUnsub: (() => void) | null = null;
+  private activeDownloads: Map<string, FileSystem.DownloadResumable> = new Map();
+  private speedTrackers: Map<string, ReturnType<typeof setInterval>> = new Map();
 
-  constructor() {
-    this.setupWebSocket();
-  }
-
-  /**
-   * ربط WebSocket لاستقبال تحديثات التقدم من السيرفر
-   */
-  private setupWebSocket() {
-    // الاتصال بالسيرفر
-    wsService.connect();
-
-    // الاستماع لتحديثات التقدم
-    this.wsUnsub = wsService.on('progress', (data: any) => {
-      // البحث عن المهمة المطابقة
-      for (const [taskId, task] of this.tasks) {
-        if (task.serverDownloadId === data.id) {
-          task.progress = data.progress || 0;
-          task.speedText = data.speed || '';
-          task.eta = data.eta || '';
-          task.filename = data.filename || task.filename;
-
-          if (data.status === 'completed') {
-            task.status = 'saving';
-            this.notifyProgress(task);
-            // تحميل الملف من السيرفر إلى الجوال
-            this.saveFileToPhone(task, data);
-          } else if (data.status === 'error') {
-            task.status = 'error';
-            task.error = data.error || 'فشل التحميل';
-            this.notifyProgress(task);
-          } else {
-            task.status = 'downloading';
-            this.notifyProgress(task);
-          }
-          break;
-        }
-      }
-    });
-  }
-
-  /**
-   * الاشتراك في تحديثات التقدم
-   */
   onProgress(callback: ProgressCallback): () => void {
     this.progressCallbacks.add(callback);
     return () => this.progressCallbacks.delete(callback);
@@ -88,12 +44,14 @@ class DownloadManagerClass {
 
   private notifyProgress(task: DownloadTask) {
     this.progressCallbacks.forEach(cb => {
-      try { cb({ ...task }); } catch (e) { console.error('[DM] Callback error:', e); }
+      try { cb({ ...task }); } catch (e) { /* ignore */ }
     });
   }
 
   /**
    * بدء تحميل جديد
+   * 1. يستخرج رابط مباشر من السيرفر (yt-dlp -g)
+   * 2. يحمّل مباشرة من YouTube CDN عبر الجوال
    */
   async startDownload(options: {
     url: string;
@@ -112,7 +70,7 @@ class DownloadManagerClass {
       filesize: 0,
       quality: options.quality || 'best',
       type: options.type || 'video',
-      status: 'starting',
+      status: 'extracting',
       progress: 0,
       downloadedBytes: 0,
       speed: 0,
@@ -126,168 +84,170 @@ class DownloadManagerClass {
     this.notifyProgress(task);
 
     try {
-      // بدء التحميل على السيرفر
-      const response = await api.startDownload({
-        url: options.url,
-        type: options.type || 'video',
-        quality: options.quality || 'best',
-        audioQuality: options.type === 'audio' ? (options.quality || '192') : undefined,
-        subtitleLang: null,
-        cookies: null,
-        isPlaylist: false,
-        playlistItems: null,
-      });
+      // الخطوة 1: استخراج رابط CDN من السيرفر
+      const extracted = await api.extractDirectUrls(
+        options.url,
+        options.quality,
+        options.type
+      );
 
-      // ⚠️ السيرفر يرجع downloadId وليس id
-      task.serverDownloadId = response.downloadId || response.id;
+      if (!extracted.directUrls || extracted.directUrls.length === 0) {
+        throw new Error('لم يتم العثور على رابط تحميل');
+      }
+
+      const bestUrl = extracted.directUrls.find((u: any) => u.type === 'combined')
+        || extracted.directUrls[0];
+
+      const ext = bestUrl.ext || (options.type === 'audio' ? 'mp3' : 'mp4');
+      const sanitizedTitle = (extracted.title || options.title || 'video')
+        .replace(/[^\w\s\u0600-\u06FF.-]/g, '')
+        .substring(0, 80);
+      const filename = `${sanitizedTitle}.${ext}`;
+
+      task.filename = filename;
+      task.filesize = bestUrl.filesize || 0;
       task.status = 'downloading';
       this.notifyProgress(task);
 
-      // Polling fallback: لو WebSocket ما أرسل تحديثات، نسأل السيرفر مباشرة
-      this.startPolling(task);
+      // الخطوة 2: تحميل مباشر من CDN
+      await this.downloadFromCDN(task, bestUrl.url, filename, bestUrl.headers || {});
 
       return taskId;
     } catch (error: any) {
       task.status = 'error';
-      task.error = error.message || 'فشل بدء التحميل';
+      task.error = error.message || 'فشل التحميل';
       this.notifyProgress(task);
       throw error;
     }
   }
 
   /**
-   * حفظ الملف من السيرفر إلى الجوال
+   * تحميل مباشر من CDN إلى الجوال
    */
-  private async saveFileToPhone(task: DownloadTask, data: any) {
-    try {
-      if (!data.files || data.files.length === 0) {
-        task.status = 'completed';
-        task.progress = 100;
+  private async downloadFromCDN(
+    task: DownloadTask,
+    url: string,
+    filename: string,
+    headers: Record<string, string>
+  ): Promise<void> {
+    const localUri = FileSystem.documentDirectory + filename;
+
+    let lastBytes = 0;
+    let lastTime = Date.now();
+
+    const downloadResumable = FileSystem.createDownloadResumable(
+      url,
+      localUri,
+      { headers },
+      (progress) => {
+        const { totalBytesWritten, totalBytesExpectedToWrite } = progress;
+        task.downloadedBytes = totalBytesWritten;
+
+        if (totalBytesExpectedToWrite > 0) {
+          task.filesize = totalBytesExpectedToWrite;
+          task.progress = Math.round((totalBytesWritten / totalBytesExpectedToWrite) * 100);
+        }
+
+        // حساب السرعة
+        const now = Date.now();
+        const elapsed = (now - lastTime) / 1000;
+        if (elapsed >= 1) {
+          const speed = (totalBytesWritten - lastBytes) / elapsed;
+          task.speed = speed;
+          task.speedText = this.formatSpeed(speed);
+
+          if (speed > 0 && totalBytesExpectedToWrite > 0) {
+            const remaining = totalBytesExpectedToWrite - totalBytesWritten;
+            task.eta = this.formatETA(remaining / speed);
+          }
+
+          lastBytes = totalBytesWritten;
+          lastTime = now;
+        }
+
         this.notifyProgress(task);
-        return;
       }
+    );
 
-      const file = data.files[0];
-      const fileUrl = api.getFileUrl(task.serverDownloadId!, file.name);
-      const localUri = FileSystem.documentDirectory + file.name;
+    this.activeDownloads.set(task.id, downloadResumable);
 
-      task.status = 'saving';
-      this.notifyProgress(task);
+    try {
+      const result = await downloadResumable.downloadAsync();
 
-      // تحميل الملف من السيرفر إلى التخزين المحلي
-      const download = await FileSystem.downloadAsync(fileUrl, localUri);
+      if (result && result.uri) {
+        task.localPath = result.uri;
+        task.status = 'saving';
+        this.notifyProgress(task);
 
-      if (download.uri) {
-        task.localPath = download.uri;
-
-        // حفظ في المعرض
+        // حفظ في معرض الصور
         try {
           const { status } = await MediaLibrary.requestPermissionsAsync();
           if (status === 'granted') {
-            await MediaLibrary.saveToLibraryAsync(download.uri);
+            await MediaLibrary.saveToLibraryAsync(result.uri);
           }
         } catch (e) {
-          console.warn('[DM] Gallery save failed:', e);
+          console.warn('[DM] Gallery save error:', e);
         }
-      }
 
-      task.status = 'completed';
-      task.progress = 100;
-      task.speedText = '';
-      task.eta = '';
-      this.notifyProgress(task);
+        task.status = 'completed';
+        task.progress = 100;
+        task.speedText = '';
+        task.eta = '';
+      } else {
+        throw new Error('فشل حفظ الملف');
+      }
     } catch (error: any) {
-      task.status = 'error';
-      task.error = 'فشل حفظ الملف: ' + (error.message || '');
-      this.notifyProgress(task);
+      if (task.status !== 'paused' && task.status !== 'cancelled') {
+        task.status = 'error';
+        task.error = error.message || 'خطأ في التحميل';
+      }
     }
+
+    this.activeDownloads.delete(task.id);
+    this.notifyProgress(task);
   }
 
-  /**
-   * Polling: يسأل السيرفر كل 3 ثواني عن حالة التحميل
-   * كإحتياط لو WebSocket ما وصلت التحديثات
-   */
-  private startPolling(task: DownloadTask) {
-    const pollInterval = setInterval(async () => {
-      if (!task.serverDownloadId || 
-          task.status === 'completed' || 
-          task.status === 'error' || 
-          task.status === 'cancelled') {
-        clearInterval(pollInterval);
-        return;
-      }
-
-      try {
-        const status = await api.getDownloadStatus(task.serverDownloadId);
-        if (!status) return;
-
-        task.progress = status.progress || task.progress;
-        task.speedText = status.speed || task.speedText;
-        task.eta = status.eta || task.eta;
-        task.filename = status.filename || task.filename;
-
-        if (status.status === 'completed') {
-          clearInterval(pollInterval);
-          task.status = 'saving';
-          this.notifyProgress(task);
-          this.saveFileToPhone(task, status);
-        } else if (status.status === 'error') {
-          clearInterval(pollInterval);
-          task.status = 'error';
-          task.error = status.error || 'فشل التحميل';
-          this.notifyProgress(task);
-        } else {
-          task.status = 'downloading';
-          this.notifyProgress(task);
-        }
-      } catch (e) {
-        // تجاهل أخطاء الشبكة
-      }
-    }, 3000);
-  }
-
-  /**
-   * إلغاء التحميل
-   */
   async cancelDownload(taskId: string): Promise<void> {
     const task = this.tasks.get(taskId);
     if (!task) return;
 
-    // إلغاء على السيرفر
-    if (task.serverDownloadId) {
-      try {
-        await api.cancelDownload(task.serverDownloadId);
-      } catch (e) { /* ignore */ }
+    task.status = 'cancelled';
+
+    const download = this.activeDownloads.get(taskId);
+    if (download) {
+      try { await download.pauseAsync(); } catch (e) { /* ignore */ }
+      this.activeDownloads.delete(taskId);
     }
 
-    task.status = 'cancelled';
     this.notifyProgress(task);
   }
 
-  /**
-   * جلب مهمة
-   */
   getTask(taskId: string): DownloadTask | undefined {
     return this.tasks.get(taskId);
   }
 
-  /**
-   * جلب كل المهام
-   */
   getAllTasks(): DownloadTask[] {
     return Array.from(this.tasks.values()).sort((a, b) => b.startedAt - a.startedAt);
   }
 
-  /**
-   * حذف مهمة
-   */
   removeTask(taskId: string): void {
     this.tasks.delete(taskId);
   }
 
-  /**
-   * تنسيق حجم الملف
-   */
+  private formatSpeed(bytesPerSec: number): string {
+    if (bytesPerSec <= 0) return '';
+    if (bytesPerSec < 1024) return `${Math.round(bytesPerSec)} B/s`;
+    if (bytesPerSec < 1024 * 1024) return `${(bytesPerSec / 1024).toFixed(1)} KB/s`;
+    return `${(bytesPerSec / (1024 * 1024)).toFixed(1)} MB/s`;
+  }
+
+  private formatETA(seconds: number): string {
+    if (seconds <= 0 || !isFinite(seconds)) return '';
+    if (seconds < 60) return `${Math.round(seconds)} ث`;
+    if (seconds < 3600) return `${Math.floor(seconds / 60)} د ${Math.round(seconds % 60)} ث`;
+    return `${Math.floor(seconds / 3600)} س ${Math.floor((seconds % 3600) / 60)} د`;
+  }
+
   static formatSize(bytes: number): string {
     if (bytes <= 0) return '';
     if (bytes < 1024) return `${bytes} B`;

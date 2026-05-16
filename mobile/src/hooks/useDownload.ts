@@ -1,6 +1,6 @@
 /**
- * useDownload Hook - إدارة التحميل
- * يستخدم DownloadManager للتحميل عبر السيرفر
+ * useDownload Hook
+ * يستخدم DownloadManager لاستخراج CDN URL + تحميل مباشر
  */
 
 import { useState, useCallback, useEffect, useRef } from 'react';
@@ -16,13 +16,8 @@ export const useDownload = () => {
     unsubRef.current = downloadManager.onProgress((task) => {
       setCurrentTask({ ...task });
 
-      if (task.status === 'downloading' || task.status === 'starting' || task.status === 'saving') {
-        setIsDownloading(true);
-      }
-
-      if (task.status === 'completed' || task.status === 'error' || task.status === 'cancelled') {
-        setIsDownloading(false);
-      }
+      const active = ['extracting', 'downloading', 'saving'].includes(task.status);
+      setIsDownloading(active);
 
       if (task.status === 'error' && task.error) {
         setError(task.error);
