@@ -9,6 +9,8 @@ Restart=always
 User=root
 Environment=NODE_ENV=production
 Environment=PORT=3000
+Environment=YOUTUBE_API_KEY=
+Environment=PATH=/usr/local/bin:/usr/bin:/bin:/root/.deno/bin
 
 [Install]
 WantedBy=multi-user.target

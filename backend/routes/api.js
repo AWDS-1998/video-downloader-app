@@ -10,7 +10,7 @@ const { detectPlatform, validateUrl, isPlaylistUrl, getAllPlatforms } = require(
 const downloader = require('../services/downloader');
 const logger = require('../services/logger');
 const { videoInfoCache, formatsCache } = require('../services/cache');
-const { isYouTubeUrl, extractVideoId, getVideoInfoFast } = require('../services/innertube');
+const youtubeApi = require('../services/youtubeApi');
 
 // حد أقصى للطلبات المتزامنة لمنع انهيار السيرفر
 let activeRequests = 0;
@@ -86,19 +86,20 @@ router.post('/info', async (req, res) => {
 
     let info;
 
-    // مسار سريع لليوتيوب: InnerTube API (< 1 ثانية)
-    if (isYouTubeUrl(url)) {
-      const videoId = extractVideoId(url);
-      if (videoId) {
+    // مسار سريع لليوتيوب: YouTube Data API (< 0.5 ثانية)
+    if (youtubeApi.isYouTubeUrl(url)) {
+      const videoId = youtubeApi.extractVideoId(url);
+      if (videoId && youtubeApi.isConfigured()) {
         try {
-          info = await getVideoInfoFast(videoId);
-          logger.logInfo(`[InnerTube] Fetched in ${info._fetchedIn}`);
-        } catch (innertubeErr) {
-          // إذا فشل InnerTube، نرجع لـ yt-dlp
-          logger.logWarn(`[InnerTube] Failed, falling back to yt-dlp: ${innertubeErr.message}`);
+          info = await youtubeApi.getVideoInfo(videoId);
+          logger.logInfo(`[YouTube API] Fetched in ${info._fetchedIn}`);
+        } catch (apiErr) {
+          // إذا فشل YouTube API، نرجع لـ yt-dlp
+          logger.logWarn(`[YouTube API] Failed, falling back to yt-dlp: ${apiErr.message}`);
           info = await downloader.getVideoInfo(url, cookies);
         }
       } else {
+        // المفتاح غير مُعد، نستخدم yt-dlp
         info = await downloader.getVideoInfo(url, cookies);
       }
     } else {
