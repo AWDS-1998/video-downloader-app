@@ -47,7 +47,7 @@ export const PlayScreen: React.FC = () => {
       // Re-trigger download with same params
       downloadManager.removeTask(task.id);
       // We'll need to re-extract. For now just remove and let user re-download
-      Alert.alert('Retry', 'Please paste the link again on the Download tab to retry.');
+      Alert.alert(t('common.retry'), t('play.retryHint'));
     } catch (e) {
       // fallback
     }
@@ -139,7 +139,7 @@ export const PlayScreen: React.FC = () => {
 
             {isFailed && (
               <Text style={s.dlFailed}>
-                {task.status === 'error' ? '❌ Failed' : '🚫 Cancelled'}
+                {task.status === 'error' ? t('play.failed') : t('play.cancelled')}
               </Text>
             )}
           </View>
@@ -241,7 +241,7 @@ function ScrollViewContent({ colors, t, s, downloading, downloaded, renderDownlo
           {/* Downloading Section */}
           {downloading.length > 0 && (
             <View style={s.sectionWrap}>
-              <Text style={s.sectionTitle}>Downloading ({downloading.length})</Text>
+              <Text style={s.sectionTitle}>{t('play.downloading')} ({downloading.length})</Text>
               {downloading.map((task: DownloadTask, i: number) => (
                 <View key={task.id}>{renderDownloadingItem(task, i)}</View>
               ))}
@@ -251,7 +251,7 @@ function ScrollViewContent({ colors, t, s, downloading, downloaded, renderDownlo
           {/* Downloaded Section */}
           <View style={s.sectionWrap}>
             <View style={s.sectionHeader}>
-              <Text style={s.sectionTitle}>Downloaded</Text>
+              <Text style={s.sectionTitle}>{t('play.downloaded')}</Text>
               <View style={s.sectionActions}>
                 {downloaded.length > 0 && (
                   <TouchableOpacity onPress={handleClearAll} style={s.sectionActionBtn}>

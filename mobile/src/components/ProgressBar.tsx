@@ -6,6 +6,7 @@
 import React, { useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, Animated } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, BorderRadius, Typography } from '../theme';
 
 interface Props {
@@ -33,15 +34,15 @@ export const ProgressBar: React.FC<Props> = ({ progress, speed, eta, filename, s
 
   return (
     <View style={styles.container}>
-      {filename ? <Text style={styles.filename} numberOfLines={1}>📄 {filename}</Text> : null}
+      {filename ? <View style={styles.filenameRow}><Ionicons name="document-outline" size={14} color={Colors.textSecondary} /><Text style={styles.filename} numberOfLines={1}>{filename}</Text></View> : null}
       <View style={styles.barBackground}>
         <Animated.View style={[styles.barFill, { width, backgroundColor: getStatusColor() }]} />
       </View>
       <View style={styles.infoRow}>
         <Text style={styles.percentage}>{Math.round(progress)}%</Text>
         <View style={styles.rightInfo}>
-          {speed ? <Text style={styles.infoText}>⚡ {speed}</Text> : null}
-          {eta ? <Text style={styles.infoText}>⏱️ {eta}</Text> : null}
+          {speed ? <View style={styles.statItem}><Ionicons name="speedometer-outline" size={12} color={Colors.textTertiary} /><Text style={styles.infoText}>{speed}</Text></View> : null}
+          {eta ? <View style={styles.statItem}><Ionicons name="time-outline" size={12} color={Colors.textTertiary} /><Text style={styles.infoText}>{eta}</Text></View> : null}
         </View>
       </View>
     </View>
@@ -50,11 +51,13 @@ export const ProgressBar: React.FC<Props> = ({ progress, speed, eta, filename, s
 
 const styles = StyleSheet.create({
   container: { marginVertical: Spacing.sm },
-  filename: { color: Colors.textSecondary, fontSize: Typography.sizes.sm, marginBottom: Spacing.xs },
+  filenameRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: Spacing.xs },
+  filename: { color: Colors.textSecondary, fontSize: Typography.sizes.sm, flex: 1 },
   barBackground: { height: 8, backgroundColor: Colors.backgroundTertiary, borderRadius: 4, overflow: 'hidden' },
   barFill: { height: '100%', borderRadius: 4 },
   infoRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: Spacing.xs },
   percentage: { color: Colors.textPrimary, fontSize: Typography.sizes.sm, fontWeight: Typography.weights.bold },
   rightInfo: { flexDirection: 'row', gap: Spacing.md },
+  statItem: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   infoText: { color: Colors.textTertiary, fontSize: Typography.sizes.xs },
 });

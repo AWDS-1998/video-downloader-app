@@ -16,37 +16,57 @@
     "comingSoon": "Coming Soon"
   },
   "tabs": {
-    "home": "Home",
-    "playlist": "Playlists",
-    "history": "Downloads",
-    "platforms": "Platforms",
+    "home": "Download",
+    "history": "Play",
     "settings": "Settings"
   },
   "home": {
     "title": "Video Downloader",
     "subtitle": "Download from any platform",
     "fetchInfo": "Fetch Info",
-    "pasteUrl": "Paste a link from any platform to start",
-    "supportedPlatforms": "YouTube • TikTok • Instagram • Twitter • +1800",
+    "pasteUrl": "Paste video link here...",
+    "supportedPlatforms": "+1800",
     "videoQuality": "Video Quality",
     "audioQuality": "Audio Quality",
     "video": "Video",
-    "audio": "Audio",
+    "audio": "Audio MP3",
     "startDownload": "Start Download",
-    "downloadNew": "New Download"
+    "downloadMp3": "Download MP3",
+    "downloadNew": "New Download",
+    "formatLabel": "Download Type",
+    "viewSites": "View sites",
+    "clipboardLabel": "Link you copied",
+    "playlistDetected": "Playlist Detected",
+    "playlistMessage": "This looks like a playlist. Download as single video?",
+    "singleVideo": "Single Video",
+    "fullPlaylist": "Full Playlist"
   },
   "download": {
-    "extracting": "🔗 Preparing download link...",
-    "downloading": "📥 Downloading...",
-    "saving": "💾 Saving to gallery...",
-    "completed": "✅ Download complete!",
-    "error": "❌ Download failed",
-    "cancelled": "🚫 Cancelled",
-    "preparing": "⏳ Preparing...",
+    "extracting": "Preparing download link...",
+    "downloading": "Downloading...",
+    "saving": "Saving to gallery...",
+    "completed": "Download complete!",
+    "error": "Download failed",
+    "cancelled": "Cancelled",
+    "preparing": "Preparing...",
     "speed": "Speed",
     "eta": "Time left",
     "cancelConfirm": "Cancel Download",
-    "cancelMessage": "Are you sure?"
+    "cancelMessage": "Are you sure?",
+    "btnDownload": "Download",
+    "btnDownloading": "Downloading...",
+    "fetchingInfo": "Fetching info...",
+    "fetchFailed": "Failed to fetch info"
+  },
+  "play": {
+    "downloading": "Downloading",
+    "downloaded": "Downloaded",
+    "paused": "Paused",
+    "failed": "Failed",
+    "cancelled": "Cancelled",
+    "extracting": "Extracting...",
+    "saving": "Saving...",
+    "retryHint": "Paste the link again on the Download tab to retry."
   },
   "history": {
     "title": "Downloads",
@@ -54,7 +74,7 @@
     "emptySubtitle": "Start downloading from the home screen",
     "active": "Active",
     "clearAll": "Clear All",
-    "clearConfirmTitle": "⚠️ Clear All",
+    "clearConfirmTitle": "Clear All",
     "clearConfirmMessage": "Are you sure you want to delete all records?",
     "deleteConfirm": "Yes, delete",
     "play": "Play",
@@ -62,19 +82,29 @@
     "openFile": "Open File",
     "fileNotFound": "File not found on device"
   },
+  "share": {
+    "title": "Download video as",
+    "music": "Music",
+    "video": "Video",
+    "fast": "Fast",
+    "classicMp3": "Classic MP3",
+    "highQuality": "High quality",
+    "medium": "Medium",
+    "hd": "HD"
+  },
   "settings": {
-    "title": "⚙️ Settings",
-    "defaultQuality": "🎚️ Default Quality",
+    "title": "Settings",
+    "defaultQuality": "Default Quality",
     "videoLabel": "Video",
     "audioLabel": "Audio MP3",
-    "appearance": "🎨 Appearance",
+    "appearance": "Appearance",
     "theme": "Theme",
     "themeSystem": "System",
     "themeDark": "Dark",
     "themeLight": "Light",
-    "language": "🌍 Language",
+    "language": "Language",
     "languageLabel": "Language",
-    "permissions": "🔐 Permissions",
+    "permissions": "Permissions",
     "permStorage": "Storage Access",
     "permStorageDesc": "Required to save downloaded files to your gallery",
     "permNotifications": "Notifications",
@@ -82,7 +112,7 @@
     "permGranted": "Granted",
     "permDenied": "Denied — Tap to enable",
     "openSystemSettings": "Open Settings",
-    "updates": "📦 Updates",
+    "updates": "Updates",
     "checkUpdates": "Check for Updates",
     "currentVersion": "Current Version",
     "noUpdates": "You're on the latest version",
@@ -96,6 +126,10 @@
   },
   "platforms": {
     "title": "Supported Platforms",
-    "subtitle": "1800+ supported websites"
+    "subtitle": "+1800 supported websites"
+  },
+  "format": {
+    "mp3": "MP3",
+    "mp4": "MP4"
   }
 }

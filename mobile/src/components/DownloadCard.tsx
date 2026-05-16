@@ -40,7 +40,7 @@ export const DownloadCard: React.FC<Props> = ({ item, onPress, onCancel }) => {
         <View style={styles.info}>
           <Text style={styles.filename} numberOfLines={1}>{item.filename || 'جاري التحميل...'}</Text>
           <View style={styles.metaRow}>
-            <Text style={styles.metaText}>{item.type === 'audio' ? '🎵 MP3' : '🎬 MP4'}</Text>
+            <Text style={styles.metaText}>{item.type === 'audio' ? 'MP3' : 'MP4'}</Text>
             <Text style={styles.metaText}>• {item.quality}</Text>
             {item.startedAt && (
               <Text style={styles.metaText}>• {new Date(item.startedAt).toLocaleTimeString('ar')}</Text>

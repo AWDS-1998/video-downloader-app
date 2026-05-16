@@ -1,6 +1,7 @@
 /**
- * ShareDownloadSheet - Bottom Sheet مثل Snaptube
- * يظهر عند مشاركة رابط فيديو للتطبيق
+ * ShareDownloadSheet - Snaptube-style Bottom Sheet
+ * Shows when user shares a video URL to our app
+ * Theme-aware and fully translated
  */
 
 import React, { useState, useEffect } from 'react';
@@ -9,8 +10,11 @@ import {
   StyleSheet, ActivityIndicator, Image, Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Spacing, BorderRadius, Typography } from '../theme';
+import { Spacing, BorderRadius, Typography } from '../theme';
+import { useTheme } from '../contexts/ThemeContext';
+import { useI18n } from '../i18n';
 import api from '../services/api';
+import downloadManager from '../services/downloadManager';
 import { VideoInfo } from '../types';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -25,11 +29,13 @@ interface FormatOption {
   label: string;
   quality: string;
   size: string;
-  icon: string;
+  icon: keyof typeof Ionicons.glyphMap;
   type: 'audio' | 'video';
 }
 
 export const ShareDownloadSheet: React.FC<Props> = ({ url, visible, onClose }) => {
+  const { colors } = useTheme();
+  const { t } = useI18n();
   const [info, setInfo] = useState<VideoInfo | null>(null);
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
@@ -48,7 +54,7 @@ export const ShareDownloadSheet: React.FC<Props> = ({ url, visible, onClose }) =
     try {
       const data = await api.getVideoInfo(videoUrl);
       setInfo(data);
-      setSelected('classic_mp3'); // Default selection
+      setSelected('192'); // Default: Classic MP3
     } catch (err) {
       console.error('Share fetch error:', err);
     } finally {
@@ -62,8 +68,8 @@ export const ShareDownloadSheet: React.FC<Props> = ({ url, visible, onClose }) =
 
     // Music options
     formats.push(
-      { label: 'Fast', quality: '128', size: '', icon: 'musical-notes', type: 'audio' },
-      { label: 'Classic MP3', quality: '192', size: '', icon: 'musical-notes', type: 'audio' },
+      { label: t('share.fast'), quality: '128', size: '', icon: 'musical-notes', type: 'audio' },
+      { label: t('share.classicMp3'), quality: '192', size: '', icon: 'musical-notes', type: 'audio' },
     );
 
     // Video options from available heights
@@ -75,12 +81,12 @@ export const ShareDownloadSheet: React.FC<Props> = ({ url, visible, onClose }) =
 
     if (heights.length === 0) {
       formats.push(
-        { label: 'Fast (360p)', quality: '360', size: '', icon: 'play-circle', type: 'video' },
-        { label: 'High quality (720p)', quality: '720', size: '', icon: 'play-circle', type: 'video' },
+        { label: `${t('share.fast')} (360p)`, quality: '360', size: '', icon: 'play-circle', type: 'video' },
+        { label: `${t('share.highQuality')} (720p)`, quality: '720', size: '', icon: 'play-circle', type: 'video' },
       );
     } else {
       heights.slice(0, 4).forEach(h => {
-        const tag = h >= 1080 ? 'HD' : h >= 720 ? 'High quality' : h >= 480 ? 'Medium' : 'Fast';
+        const tag = h >= 1080 ? t('share.hd') : h >= 720 ? t('share.highQuality') : h >= 480 ? t('share.medium') : t('share.fast');
         formats.push({
           label: `${tag} (${h}p)`,
           quality: String(h),
@@ -99,12 +105,13 @@ export const ShareDownloadSheet: React.FC<Props> = ({ url, visible, onClose }) =
     setDownloading(true);
     try {
       const fmt = getFormats().find(f => f.quality === selected);
-      await api.startDownload({
+      await downloadManager.startDownload({
         url,
+        title: info.title,
+        quality: fmt?.quality || 'best',
         type: fmt?.type || 'video',
-        quality: fmt?.type === 'video' ? fmt.quality : undefined,
-        audioQuality: fmt?.type === 'audio' ? fmt.quality : undefined,
-      } as any);
+        thumbnail: info.thumbnail,
+      });
       onClose();
     } catch (err) {
       console.error('Download error:', err);
@@ -116,61 +123,62 @@ export const ShareDownloadSheet: React.FC<Props> = ({ url, visible, onClose }) =
   const formats = getFormats();
   const musicFormats = formats.filter(f => f.type === 'audio');
   const videoFormats = formats.filter(f => f.type === 'video');
+  const s = getStyles(colors);
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={onClose}>
-        <TouchableOpacity style={styles.sheet} activeOpacity={1}>
+      <TouchableOpacity style={s.overlay} activeOpacity={1} onPress={onClose}>
+        <TouchableOpacity style={s.sheet} activeOpacity={1}>
           {/* Handle bar */}
-          <View style={styles.handleBar} />
+          <View style={s.handleBar} />
 
           {/* Header */}
-          <Text style={styles.title}>Download video as</Text>
+          <Text style={s.title}>{t('share.title')}</Text>
 
           {loading ? (
-            <View style={styles.loadingBox}>
-              <ActivityIndicator size="large" color={Colors.primary} />
-              <Text style={styles.loadingText}>جاري جلب المعلومات...</Text>
+            <View style={s.loadingBox}>
+              <ActivityIndicator size="large" color={colors.primary} />
+              <Text style={s.loadingText}>{t('download.fetchingInfo')}</Text>
             </View>
           ) : info ? (
-            <ScrollView showsVerticalScrollIndicator={false} style={styles.scrollView}>
+            <ScrollView showsVerticalScrollIndicator={false} style={s.scrollView}>
               {/* Thumbnail */}
               {info.thumbnail && (
-                <Image source={{ uri: info.thumbnail }} style={styles.thumbnail} resizeMode="cover" />
+                <Image source={{ uri: info.thumbnail }} style={s.thumbnail} resizeMode="cover" />
               )}
-              <Text style={styles.videoTitle} numberOfLines={2}>{info.title}</Text>
+              <Text style={s.videoTitle} numberOfLines={2}>{info.title}</Text>
 
               {/* Music Section */}
-              <Text style={styles.sectionLabel}>Music</Text>
+              <Text style={s.sectionLabel}>{t('share.music')}</Text>
               {musicFormats.map(fmt => (
                 <TouchableOpacity
                   key={fmt.quality}
-                  style={[styles.formatRow, selected === fmt.quality && styles.formatRowSelected]}
+                  style={[s.formatRow, selected === fmt.quality && s.formatRowSelected]}
                   onPress={() => setSelected(fmt.quality)}
                 >
-                  <Ionicons name={fmt.icon as any} size={24} color={Colors.textTertiary} />
-                  <View style={styles.formatInfo}>
-                    <Text style={styles.formatLabel}>{fmt.label}</Text>
+                  <Ionicons name={fmt.icon} size={24} color={colors.textTertiary} />
+                  <View style={s.formatInfo}>
+                    <Text style={s.formatLabel}>{fmt.label}</Text>
                   </View>
-                  <View style={[styles.radio, selected === fmt.quality && styles.radioSelected]}>
+                  <View style={[s.radio, selected === fmt.quality && s.radioSelected]}>
                     {selected === fmt.quality && <Ionicons name="checkmark" size={14} color="#000" />}
                   </View>
                 </TouchableOpacity>
               ))}
 
               {/* Video Section */}
-              <Text style={styles.sectionLabel}>Video</Text>
+              <Text style={s.sectionLabel}>{t('share.video')}</Text>
               {videoFormats.map(fmt => (
                 <TouchableOpacity
                   key={fmt.quality}
-                  style={[styles.formatRow, selected === fmt.quality && styles.formatRowSelected]}
+                  style={[s.formatRow, selected === fmt.quality && s.formatRowSelected]}
                   onPress={() => setSelected(fmt.quality)}
                 >
-                  <Ionicons name={fmt.icon as any} size={24} color={Colors.textTertiary} />
-                  <View style={styles.formatInfo}>
-                    <Text style={styles.formatLabel}>{fmt.label}</Text>
+                  <Ionicons name={fmt.icon} size={24} color={colors.textTertiary} />
+                  <View style={s.formatInfo}>
+                    <Text style={s.formatLabel}>{fmt.label}</Text>
                   </View>
-                  <View style={[styles.radio, selected === fmt.quality && styles.radioSelected]}>
+                  <View style={[s.radio, selected === fmt.quality && s.radioSelected]}>
                     {selected === fmt.quality && <Ionicons name="checkmark" size={14} color="#000" />}
                   </View>
                 </TouchableOpacity>
@@ -178,21 +186,24 @@ export const ShareDownloadSheet: React.FC<Props> = ({ url, visible, onClose }) =
 
               {/* Download Button */}
               <TouchableOpacity
-                style={[styles.downloadBtn, downloading && styles.downloadBtnDisabled]}
+                style={[s.downloadBtn, downloading && s.downloadBtnDisabled]}
                 onPress={handleDownload}
                 disabled={!selected || downloading}
               >
                 {downloading ? (
                   <ActivityIndicator color="#000" />
                 ) : (
-                  <Text style={styles.downloadBtnText}>⬇️ Download</Text>
+                  <>
+                    <Ionicons name="download-outline" size={20} color="#000" />
+                    <Text style={s.downloadBtnText}>{t('download.btnDownload')}</Text>
+                  </>
                 )}
               </TouchableOpacity>
             </ScrollView>
           ) : (
-            <View style={styles.loadingBox}>
-              <Ionicons name="alert-circle" size={40} color={Colors.error} />
-              <Text style={styles.loadingText}>فشل جلب المعلومات</Text>
+            <View style={s.loadingBox}>
+              <Ionicons name="alert-circle" size={40} color={colors.error} />
+              <Text style={s.loadingText}>{t('download.fetchFailed')}</Text>
             </View>
           )}
         </TouchableOpacity>
@@ -201,107 +212,53 @@ export const ShareDownloadSheet: React.FC<Props> = ({ url, visible, onClose }) =
   );
 };
 
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  sheet: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: SCREEN_HEIGHT * 0.75,
-    paddingBottom: 30,
-  },
-  handleBar: {
-    width: 40,
-    height: 4,
-    backgroundColor: '#D0D0D0',
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginTop: 12,
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#1A1A1A',
-    paddingHorizontal: 20,
-    marginBottom: 16,
-  },
-  scrollView: {
-    paddingHorizontal: 20,
-  },
-  thumbnail: {
-    width: '100%',
-    height: 160,
-    borderRadius: 12,
-    marginBottom: 12,
-  },
-  videoTitle: {
-    fontSize: 14,
-    color: '#555',
-    marginBottom: 20,
-  },
-  sectionLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#999',
-    marginBottom: 12,
-    marginTop: 8,
-  },
-  formatRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 16,
-    gap: 16,
-  },
-  formatRowSelected: {},
-  formatInfo: {
-    flex: 1,
-  },
-  formatLabel: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#1A1A1A',
-  },
-  radio: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#D0D0D0',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  radioSelected: {
-    backgroundColor: '#FFC107',
-    borderColor: '#FFC107',
-  },
-  downloadBtn: {
-    backgroundColor: '#FFC107',
-    borderRadius: 30,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: 24,
-    marginBottom: 10,
-  },
-  downloadBtnDisabled: {
-    opacity: 0.6,
-  },
-  downloadBtnText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1A1A1A',
-  },
-  loadingBox: {
-    alignItems: 'center',
-    paddingVertical: 50,
-    gap: 12,
-  },
-  loadingText: {
-    color: '#999',
-    fontSize: 14,
-  },
-});
+function getStyles(c: any) {
+  return StyleSheet.create({
+    overlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.5)',
+      justifyContent: 'flex-end',
+    },
+    sheet: {
+      backgroundColor: c.surface,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      maxHeight: SCREEN_HEIGHT * 0.75,
+      paddingBottom: 30,
+    },
+    handleBar: {
+      width: 40, height: 4,
+      backgroundColor: c.textTertiary,
+      borderRadius: 2, alignSelf: 'center',
+      marginTop: 12, marginBottom: 16,
+    },
+    title: {
+      fontSize: 20, fontWeight: '700',
+      color: c.textPrimary,
+      paddingHorizontal: 20, marginBottom: 16,
+    },
+    scrollView: { paddingHorizontal: 20 },
+    thumbnail: { width: '100%', height: 160, borderRadius: 12, marginBottom: 12 },
+    videoTitle: { fontSize: 14, color: c.textSecondary, marginBottom: 20 },
+    sectionLabel: { fontSize: 14, fontWeight: '600', color: c.textTertiary, marginBottom: 12, marginTop: 8 },
+    formatRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 16, gap: 16 },
+    formatRowSelected: {},
+    formatInfo: { flex: 1 },
+    formatLabel: { fontSize: 16, fontWeight: '500', color: c.textPrimary },
+    radio: {
+      width: 24, height: 24, borderRadius: 12,
+      borderWidth: 2, borderColor: c.border,
+      justifyContent: 'center', alignItems: 'center',
+    },
+    radioSelected: { backgroundColor: '#FDCB6E', borderColor: '#FDCB6E' },
+    downloadBtn: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+      gap: 8, backgroundColor: '#FDCB6E', borderRadius: 30,
+      paddingVertical: 16, marginTop: 24, marginBottom: 10,
+    },
+    downloadBtnDisabled: { opacity: 0.6 },
+    downloadBtnText: { fontSize: 16, fontWeight: '700', color: '#1A1A1A' },
+    loadingBox: { alignItems: 'center', paddingVertical: 50, gap: 12 },
+    loadingText: { color: c.textTertiary, fontSize: 14 },
+  });
+}

@@ -10,6 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Colors, Spacing, BorderRadius, Typography } from '../theme';
 import { AUDIO_QUALITIES } from '../types';
+import { useI18n } from '../i18n';
 
 interface Props {
   selected: string;
@@ -17,9 +18,13 @@ interface Props {
 }
 
 export const AudioQualitySelector: React.FC<Props> = ({ selected, onSelect }) => {
+  const { t } = useI18n();
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>🎚️ جودة الصوت (MP3)</Text>
+      <View style={styles.labelRow}>
+        <Ionicons name="options-outline" size={16} color={Colors.textSecondary} />
+        <Text style={styles.label}>{t('home.audioQuality')}</Text>
+      </View>
       <View style={styles.grid}>
         {AUDIO_QUALITIES.map((q) => {
           const isSelected = selected === q.value;
@@ -46,7 +51,8 @@ export const AudioQualitySelector: React.FC<Props> = ({ selected, onSelect }) =>
 
 const styles = StyleSheet.create({
   container: { marginBottom: Spacing.base },
-  label: { color: Colors.textSecondary, fontSize: Typography.sizes.md, fontWeight: Typography.weights.semibold, marginBottom: Spacing.sm },
+  labelRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: Spacing.sm },
+  label: { color: Colors.textSecondary, fontSize: Typography.sizes.md, fontWeight: Typography.weights.semibold },
   grid: { gap: Spacing.sm },
   card: { flexDirection: 'column', backgroundColor: Colors.surface, borderRadius: BorderRadius.md, borderWidth: 1.5, borderColor: Colors.border, padding: Spacing.md },
   cardSelected: { backgroundColor: Colors.primary + '20', borderColor: Colors.primary },

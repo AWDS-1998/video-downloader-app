@@ -1,6 +1,6 @@
 /**
  * DownloadButton Component
- * زر التحميل المتحرك
+ * Animated download button with gradient
  */
 
 import React, { useRef, useEffect } from 'react';
@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { Colors, Spacing, BorderRadius, Typography } from '../theme';
+import { useI18n } from '../i18n';
 
 interface Props {
   onPress: () => void;
@@ -19,6 +20,7 @@ interface Props {
 }
 
 export const DownloadButton: React.FC<Props> = ({ onPress, isLoading, disabled, type = 'video', label }) => {
+  const { t } = useI18n();
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
@@ -47,7 +49,7 @@ export const DownloadButton: React.FC<Props> = ({ onPress, isLoading, disabled, 
     ? (Colors.gradients.audioMode as unknown as readonly [string, string, ...string[]])
     : (Colors.gradients.primary as unknown as readonly [string, string, ...string[]]);
 
-  const buttonLabel = label || (type === 'audio' ? '🎵 تحميل MP3' : '🚀 بدء التحميل');
+  const buttonLabel = label || (type === 'audio' ? t('home.downloadMp3') : t('home.startDownload'));
 
   return (
     <Animated.View style={{ transform: [{ scale: Animated.multiply(scaleAnim, pulseAnim) }] }}>
@@ -64,7 +66,7 @@ export const DownloadButton: React.FC<Props> = ({ onPress, isLoading, disabled, 
           ) : (
             <Ionicons name={type === 'audio' ? 'musical-notes' : 'download'} size={22} color={Colors.textPrimary} />
           )}
-          <Text style={styles.label}>{isLoading ? 'جاري التحميل...' : buttonLabel}</Text>
+          <Text style={styles.label}>{isLoading ? t('download.btnDownloading') : buttonLabel}</Text>
         </LinearGradient>
       </TouchableOpacity>
     </Animated.View>

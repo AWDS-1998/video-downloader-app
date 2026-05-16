@@ -99,11 +99,11 @@ export const HomeScreen: React.FC = () => {
       // Auto-detect playlist vs single
       if (isPlaylistUrl(trimmed)) {
         Alert.alert(
-          'Playlist Detected',
-          'This looks like a playlist. Download as single video?',
+          t('home.playlistDetected'),
+          t('home.playlistMessage'),
           [
-            { text: 'Single Video', onPress: () => fetchInfo(trimmed.replace(/[&?]list=[^&]+/g, '')) },
-            { text: 'Full Playlist', style: 'cancel' },
+            { text: t('home.singleVideo'), onPress: () => fetchInfo(trimmed.replace(/[&?]list=[^&]+/g, '')) },
+            { text: t('home.fullPlaylist'), style: 'cancel' },
           ]
         );
       } else {
@@ -120,11 +120,11 @@ export const HomeScreen: React.FC = () => {
     }
     if (isPlaylistUrl(url)) {
       Alert.alert(
-        'Playlist Detected',
-        'This looks like a playlist. Download as single video?',
+        t('home.playlistDetected'),
+        t('home.playlistMessage'),
         [
-          { text: 'Single Video', onPress: () => fetchInfo(url.replace(/[&?]list=[^&]+/g, '')) },
-          { text: 'Full Playlist', style: 'cancel' },
+          { text: t('home.singleVideo'), onPress: () => fetchInfo(url.replace(/[&?]list=[^&]+/g, '')) },
+          { text: t('home.fullPlaylist'), style: 'cancel' },
         ]
       );
     } else {
@@ -143,7 +143,7 @@ export const HomeScreen: React.FC = () => {
         thumbnail: info.thumbnail,
       });
     } catch (err: any) {
-      Alert.alert('❌', err.message);
+      Alert.alert(t('common.error'), err.message);
     }
   }, [info, downloadType, videoQuality, audioQuality, startDownload]);
 
@@ -172,7 +172,7 @@ export const HomeScreen: React.FC = () => {
       <SafeAreaView style={s.safe} edges={['top']}>
         {/* Animated logo header - hides when search focused */}
         <Animated.View style={[s.logoHeader, { height: headerHeight, opacity: headerOpacity }]}>
-          <Text style={s.logoEmoji}>🎬</Text>
+          <Ionicons name="download-outline" size={36} color="#FDCB6E" />
           <Text style={s.logoTitle}>{t('home.title')}</Text>
           <Text style={s.logoSubtitle}>{t('home.subtitle')}</Text>
         </Animated.View>
@@ -240,14 +240,14 @@ export const HomeScreen: React.FC = () => {
                   <Ionicons name="link" size={20} color={colors.primary} />
                 </View>
                 <View style={s.clipInfo}>
-                  <Text style={s.clipLabel}>Link you copied</Text>
+                  <Text style={s.clipLabel}>{t('home.clipboardLabel')}</Text>
                   <Text style={s.clipUrl} numberOfLines={1}>{clipboardUrl}</Text>
                 </View>
                 <TouchableOpacity
                   style={s.clipDownloadBtn}
                   onPress={() => handlePasteAndFetch(clipboardUrl)}
                 >
-                  <Text style={s.clipDownloadText}>Download</Text>
+                  <Text style={s.clipDownloadText}>{t('download.btnDownload')}</Text>
                 </TouchableOpacity>
               </TouchableOpacity>
             </FadeInView>
@@ -312,10 +312,10 @@ export const HomeScreen: React.FC = () => {
                 {currentTask.speedText || currentTask.eta ? (
                   <View style={s.statsRow}>
                     {currentTask.speedText ? (
-                      <Text style={s.statText}>⚡ {currentTask.speedText}</Text>
+                      <Text style={s.statText}>{currentTask.speedText}</Text>
                     ) : null}
                     {currentTask.eta ? (
-                      <Text style={s.statText}>⏱ {currentTask.eta}</Text>
+                      <Text style={s.statText}>{currentTask.eta}</Text>
                     ) : null}
                   </View>
                 ) : null}
@@ -349,7 +349,7 @@ export const HomeScreen: React.FC = () => {
           {/* Platform grid - shown when empty */}
           {!info && !loadingInfo && !currentTask && (
             <FadeInView delay={200}>
-              <Text style={s.sectionLabel}>View sites</Text>
+              <Text style={s.sectionLabel}>{t('home.viewSites')}</Text>
               <View style={s.platformGrid}>
                 {PLATFORMS.map(p => (
                   <TouchableOpacity key={p.id} style={s.platformItem} activeOpacity={0.7}>

@@ -37,23 +37,42 @@ function AppContent() {
     })();
   }, []);
 
+  // Extract URL from shared text (YouTube shares: "Title\nhttps://youtu.be/...")
+  const extractUrl = (text: string): string | null => {
+    if (!text) return null;
+    const urlMatch = text.match(/https?:\/\/[^\s]+/i);
+    return urlMatch ? urlMatch[0].trim() : null;
+  };
+
   // Handle share intent
   useEffect(() => {
     const handleUrl = (event: { url: string }) => {
-      const url = event.url;
-      if (url && isValidUrl(url)) {
-        setSharedUrl(url);
+      const extracted = extractUrl(event.url);
+      if (extracted && isValidUrl(extracted)) {
+        setSharedUrl(extracted);
         setShowShareSheet(true);
       }
     };
 
-    Linking.getInitialURL().then((url) => {
-      if (url && isValidUrl(url)) {
-        setSharedUrl(url);
-        setShowShareSheet(true);
-      }
-    });
+    // Cold start: getInitialURL runs once
+    const checkInitial = async () => {
+      try {
+        const url = await Linking.getInitialURL();
+        if (url) {
+          const extracted = extractUrl(url);
+          if (extracted && isValidUrl(extracted)) {
+            // Small delay to ensure providers are ready
+            setTimeout(() => {
+              setSharedUrl(extracted);
+              setShowShareSheet(true);
+            }, 500);
+          }
+        }
+      } catch (e) { /* ignore */ }
+    };
+    checkInitial();
 
+    // Warm start: listen for new URLs
     const subscription = Linking.addEventListener('url', handleUrl);
     return () => subscription.remove();
   }, []);

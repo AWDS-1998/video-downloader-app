@@ -10,6 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Colors, Spacing, BorderRadius, Typography } from '../theme';
 import { VIDEO_QUALITIES } from '../types';
+import { useI18n } from '../i18n';
 
 interface Props {
   selected: string;
@@ -18,6 +19,7 @@ interface Props {
 }
 
 export const QualitySelector: React.FC<Props> = ({ selected, onSelect, availableHeights }) => {
+  const { t } = useI18n();
   const qualities = availableHeights && availableHeights.length > 0
     ? [
         { label: 'Best', value: 'best', icon: 'sparkles' as const },
@@ -33,7 +35,10 @@ export const QualitySelector: React.FC<Props> = ({ selected, onSelect, available
 
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>🎚️ جودة الفيديو</Text>
+      <View style={styles.labelRow}>
+        <Ionicons name="options-outline" size={16} color={Colors.textSecondary} />
+        <Text style={styles.label}>{t('home.videoQuality')}</Text>
+      </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {qualities.map((q) => {
           const isSelected = selected === q.value;
@@ -57,7 +62,8 @@ export const QualitySelector: React.FC<Props> = ({ selected, onSelect, available
 
 const styles = StyleSheet.create({
   container: { marginBottom: Spacing.base },
-  label: { color: Colors.textSecondary, fontSize: Typography.sizes.md, fontWeight: Typography.weights.semibold, marginBottom: Spacing.sm },
+  labelRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: Spacing.sm },
+  label: { color: Colors.textSecondary, fontSize: Typography.sizes.md, fontWeight: Typography.weights.semibold },
   scrollContent: { gap: Spacing.sm, paddingRight: Spacing.base },
   card: { alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.surface, borderRadius: BorderRadius.lg, borderWidth: 1.5, borderColor: Colors.border, paddingVertical: Spacing.md, paddingHorizontal: Spacing.lg, minWidth: 80, gap: Spacing.xs },
   cardSelected: { backgroundColor: Colors.primary, borderColor: Colors.primaryLight },
