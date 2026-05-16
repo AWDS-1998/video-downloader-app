@@ -3,7 +3,5 @@
  */
 
 export { HomeScreen } from './HomeScreen';
-export { HistoryScreen } from './HistoryScreen';
+export { PlayScreen } from './PlayScreen';
 export { SettingsScreen } from './SettingsScreen';
-export { PlaylistScreen } from './PlaylistScreen';
-export { PlatformsScreen } from './PlatformsScreen';
