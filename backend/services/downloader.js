@@ -52,6 +52,7 @@ function getVideoInfo(url, cookies = null) {
       '--no-warnings',
       '--no-playlist',
       '--no-download',
+      '--remote-components', 'ejs:github',
     ];
 
     // استخدام ملف الكوكيز المحلي تلقائياً
@@ -140,6 +141,7 @@ function getPlaylistInfo(url, cookies = null) {
       '--dump-json',
       '--no-warnings',
       '--yes-playlist',
+      '--remote-components', 'ejs:github',
     ];
 
     // استخدام ملف الكوكيز المحلي تلقائياً
@@ -248,6 +250,7 @@ function startDownload(downloadId, options, onProgress) {
     '--retries', '10',
     '--fragment-retries', '10',
     '--retry-sleep', '5',
+    '--remote-components', 'ejs:github',
     '-o', outputTemplate,
   ];
 
@@ -511,7 +514,7 @@ function getAllDownloads() {
  */
 function getAvailableFormats(url, cookies = null) {
   return new Promise((resolve, reject) => {
-    const args = ['--dump-json', '--no-warnings', '--no-download', '--no-playlist'];
+    const args = ['--dump-json', '--no-warnings', '--no-download', '--no-playlist', '--remote-components', 'ejs:github'];
     // استخدام ملف الكوكيز المحلي تلقائياً
     if (fs.existsSync(COOKIES_FILE)) {
       args.push('--cookies', COOKIES_FILE);
