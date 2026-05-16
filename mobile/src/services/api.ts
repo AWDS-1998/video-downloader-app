@@ -3,7 +3,7 @@
  * يتواصل مع Backend Server
  */
 
-const BASE_URL = 'http://192.168.1.100:3000'; // عدّل حسب IP السيرفر
+const BASE_URL = 'https://misbartube.lnkub.com'; // Production server
 
 class ApiService {
   private baseUrl: string;
