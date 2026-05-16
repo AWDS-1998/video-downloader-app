@@ -1,6 +1,6 @@
 /**
- * useDownload Hook - إدارة التحميل المتقدم
- * يستخدم DownloadManager للتحميل المباشر مع إيقاف/استئناف/إلغاء
+ * useDownload Hook - إدارة التحميل
+ * يستخدم DownloadManager للتحميل عبر السيرفر
  */
 
 import { useState, useCallback, useEffect, useRef } from 'react';
@@ -12,15 +12,13 @@ export const useDownload = () => {
   const [error, setError] = useState<string | null>(null);
   const unsubRef = useRef<(() => void) | null>(null);
 
-  // الاشتراك في تحديثات التقدم
   useEffect(() => {
     unsubRef.current = downloadManager.onProgress((task) => {
-      setCurrentTask(prev => {
-        if (!prev || prev.id === task.id) {
-          return { ...task };
-        }
-        return prev;
-      });
+      setCurrentTask({ ...task });
+
+      if (task.status === 'downloading' || task.status === 'starting' || task.status === 'saving') {
+        setIsDownloading(true);
+      }
 
       if (task.status === 'completed' || task.status === 'error' || task.status === 'cancelled') {
         setIsDownloading(false);
@@ -36,9 +34,6 @@ export const useDownload = () => {
     };
   }, []);
 
-  /**
-   * بدء تحميل جديد
-   */
   const startDownload = useCallback(async (options: {
     url: string;
     title: string;
@@ -54,35 +49,12 @@ export const useDownload = () => {
       const taskId = await downloadManager.startDownload(options);
       return taskId;
     } catch (err: any) {
-      const msg = err.message || 'فشل بدء التحميل';
-      setError(msg);
+      setError(err.message || 'فشل بدء التحميل');
       setIsDownloading(false);
       throw err;
     }
   }, []);
 
-  /**
-   * إيقاف مؤقت
-   */
-  const pauseDownload = useCallback(async () => {
-    if (currentTask) {
-      await downloadManager.pauseDownload(currentTask.id);
-    }
-  }, [currentTask]);
-
-  /**
-   * استئناف
-   */
-  const resumeDownload = useCallback(async () => {
-    if (currentTask) {
-      setIsDownloading(true);
-      await downloadManager.resumeDownload(currentTask.id);
-    }
-  }, [currentTask]);
-
-  /**
-   * إلغاء
-   */
   const cancelDownload = useCallback(async () => {
     if (currentTask) {
       await downloadManager.cancelDownload(currentTask.id);
@@ -90,9 +62,6 @@ export const useDownload = () => {
     }
   }, [currentTask]);
 
-  /**
-   * مسح الحالة
-   */
   const clearDownload = useCallback(() => {
     setCurrentTask(null);
     setIsDownloading(false);
@@ -104,8 +73,6 @@ export const useDownload = () => {
     isDownloading,
     error,
     startDownload,
-    pauseDownload,
-    resumeDownload,
     cancelDownload,
     clearDownload,
   };
