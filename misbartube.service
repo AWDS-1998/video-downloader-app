@@ -1,0 +1,14 @@
+[Unit]
+Description=Video Downloader Backend
+After=network.target
+
+[Service]
+WorkingDirectory=/var/www/video-downloader-app/backend
+ExecStart=/usr/bin/npm start
+Restart=always
+User=root
+Environment=NODE_ENV=production
+Environment=PORT=3000
+
+[Install]
+WantedBy=multi-user.target

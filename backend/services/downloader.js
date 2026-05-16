@@ -10,6 +10,7 @@ const fs = require('fs');
 const { logInfo, logWarn, logError, logSuccess, createTaskLog, appendToTaskLog } = require('./logger');
 
 const DOWNLOADS_DIR = path.join(__dirname, '..', 'downloads');
+const COOKIES_FILE = path.join(__dirname, '..', 'cookies.txt');
 
 if (!fs.existsSync(DOWNLOADS_DIR)) {
   fs.mkdirSync(DOWNLOADS_DIR, { recursive: true });
@@ -53,7 +54,10 @@ function getVideoInfo(url, cookies = null) {
       '--no-download',
     ];
 
-    if (cookies) {
+    // استخدام ملف الكوكيز المحلي تلقائياً
+    if (fs.existsSync(COOKIES_FILE)) {
+      args.push('--cookies', COOKIES_FILE);
+    } else if (cookies) {
       args.push('--cookies-from-browser', cookies);
     }
 
@@ -138,7 +142,10 @@ function getPlaylistInfo(url, cookies = null) {
       '--yes-playlist',
     ];
 
-    if (cookies) {
+    // استخدام ملف الكوكيز المحلي تلقائياً
+    if (fs.existsSync(COOKIES_FILE)) {
+      args.push('--cookies', COOKIES_FILE);
+    } else if (cookies) {
       args.push('--cookies-from-browser', cookies);
     }
 
@@ -253,7 +260,9 @@ function startDownload(downloadId, options, onProgress) {
   }
 
   // كوكيز - المرجع: L489-491
-  if (cookies) {
+  if (fs.existsSync(COOKIES_FILE)) {
+    args.push('--cookies', COOKIES_FILE);
+  } else if (cookies) {
     args.push('--cookies-from-browser', cookies);
   }
 
@@ -503,7 +512,12 @@ function getAllDownloads() {
 function getAvailableFormats(url, cookies = null) {
   return new Promise((resolve, reject) => {
     const args = ['--dump-json', '--no-warnings', '--no-download', '--no-playlist'];
-    if (cookies) args.push('--cookies-from-browser', cookies);
+    // استخدام ملف الكوكيز المحلي تلقائياً
+    if (fs.existsSync(COOKIES_FILE)) {
+      args.push('--cookies', COOKIES_FILE);
+    } else if (cookies) {
+      args.push('--cookies-from-browser', cookies);
+    }
     args.push(url);
 
     const proc = spawn('yt-dlp', args);
