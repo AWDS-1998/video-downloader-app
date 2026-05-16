@@ -9,6 +9,12 @@ const { v4: uuidv4 } = require('uuid');
 const { detectPlatform, validateUrl, isPlaylistUrl, getAllPlatforms } = require('../services/platformDetector');
 const downloader = require('../services/downloader');
 const logger = require('../services/logger');
+const { videoInfoCache, formatsCache } = require('../services/cache');
+const { isYouTubeUrl, extractVideoId, getVideoInfoFast } = require('../services/innertube');
+
+// حد أقصى للطلبات المتزامنة لمنع انهيار السيرفر
+let activeRequests = 0;
+const MAX_CONCURRENT = 10;
 
 /**
  * GET /api/health - فحص الخادم
@@ -49,7 +55,8 @@ router.post('/detect', (req, res) => {
 
 /**
  * POST /api/info - جلب معلومات الفيديو
- * المرجع: mode_single_video() L750-764
+ * يستخدم InnerTube API لليوتيوب (< 1 ثانية) مع كاش
+ * ويستخدم yt-dlp للمنصات الأخرى
  */
 router.post('/info', async (req, res) => {
   const { url, cookies } = req.body;
@@ -58,11 +65,54 @@ router.post('/info', async (req, res) => {
     return res.status(400).json({ error: 'رابط غير صالح' });
   }
 
+  // حماية من الطلبات الزائدة
+  if (activeRequests >= MAX_CONCURRENT) {
+    return res.status(429).json({ error: 'السيرفر مشغول، حاول مرة أخرى بعد قليل' });
+  }
+
+  activeRequests++;
+
   try {
     const platform = detectPlatform(url);
-    const info = await downloader.getVideoInfo(url, cookies);
+
+    // تحقق من الكاش أولاً
+    const cacheKey = `info:${url}`;
+    const cached = videoInfoCache.get(cacheKey);
+    if (cached) {
+      activeRequests--;
+      logger.logInfo(`[CACHE HIT] ${url}`);
+      return res.json({ ...cached, platform, _cached: true });
+    }
+
+    let info;
+
+    // مسار سريع لليوتيوب: InnerTube API (< 1 ثانية)
+    if (isYouTubeUrl(url)) {
+      const videoId = extractVideoId(url);
+      if (videoId) {
+        try {
+          info = await getVideoInfoFast(videoId);
+          logger.logInfo(`[InnerTube] Fetched in ${info._fetchedIn}`);
+        } catch (innertubeErr) {
+          // إذا فشل InnerTube، نرجع لـ yt-dlp
+          logger.logWarn(`[InnerTube] Failed, falling back to yt-dlp: ${innertubeErr.message}`);
+          info = await downloader.getVideoInfo(url, cookies);
+        }
+      } else {
+        info = await downloader.getVideoInfo(url, cookies);
+      }
+    } else {
+      // منصات أخرى: نستخدم yt-dlp
+      info = await downloader.getVideoInfo(url, cookies);
+    }
+
+    // تخزين في الكاش
+    videoInfoCache.set(cacheKey, info, 3600); // ساعة واحدة
+
+    activeRequests--;
     res.json({ ...info, platform });
   } catch (err) {
+    activeRequests--;
     logger.logError(`API /info error: ${err.message}`);
     res.status(500).json({
       error: 'فشل جلب معلومات الفيديو',
@@ -233,3 +283,15 @@ router.get('/download/:id/file/:filename', (req, res) => {
 });
 
 module.exports = router;
+
+/**
+ * GET /api/cache/stats - إحصائيات الكاش
+ */
+router.get('/cache/stats', (req, res) => {
+  res.json({
+    videoInfo: videoInfoCache.stats(),
+    formats: formatsCache.stats(),
+    activeRequests,
+    maxConcurrent: MAX_CONCURRENT,
+  });
+});
