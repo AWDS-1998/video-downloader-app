@@ -9,6 +9,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Typography } from '../theme';
+import { useTheme } from '../contexts/ThemeContext';
+import { useI18n } from '../i18n';
 import {
   GradientBackground,
   URLInput,
@@ -27,6 +29,8 @@ import { useVideoInfo } from '../hooks/useVideoInfo';
 import { useDownload } from '../hooks/useDownload';
 
 export const HomeScreen: React.FC = () => {
+  const { colors, isDark } = useTheme();
+  const { t } = useI18n();
   const [url, setUrl] = useState('');
   const [detectedPlatform, setDetectedPlatform] = useState<string | null>(null);
   const [downloadType, setDownloadType] = useState<'video' | 'audio'>('video');
@@ -104,8 +108,8 @@ export const HomeScreen: React.FC = () => {
         >
           <View style={styles.header}>
             <Text style={styles.headerEmoji}>🎬</Text>
-            <Text style={styles.headerTitle}>Video Downloader</Text>
-            <Text style={styles.headerSubtitle}>حمّل من أي منصة</Text>
+            <Text style={styles.headerTitle}>{t('home.title')}</Text>
+            <Text style={styles.headerSubtitle}>{t('home.subtitle')}</Text>
           </View>
 
           <URLInput
@@ -169,13 +173,13 @@ export const HomeScreen: React.FC = () => {
           {currentTask && (
             <View style={styles.progressSection}>
               <Text style={styles.sectionTitle}>
-                {currentTask.status === 'extracting' ? '🔗 جاري تحضير الرابط...' :
-                 currentTask.status === 'downloading' ? '📥 جاري التحميل...' :
-                 currentTask.status === 'saving' ? '💾 جاري الحفظ في المعرض...' :
-                 currentTask.status === 'completed' ? '✅ اكتمل التحميل!' :
-                 currentTask.status === 'error' ? '❌ فشل التحميل' :
-                 currentTask.status === 'cancelled' ? '🚫 تم الإلغاء' :
-                 '⏳ جاري التحضير...'}
+                {currentTask.status === 'extracting' ? t('download.extracting') :
+                 currentTask.status === 'downloading' ? t('download.downloading') :
+                 currentTask.status === 'saving' ? t('download.saving') :
+                 currentTask.status === 'completed' ? t('download.completed') :
+                 currentTask.status === 'error' ? t('download.error') :
+                 currentTask.status === 'cancelled' ? t('download.cancelled') :
+                 t('download.preparing')}
               </Text>
 
               {/* شريط التقدم */}

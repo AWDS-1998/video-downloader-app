@@ -7,7 +7,10 @@
 
 import * as FileSystem from 'expo-file-system/legacy';
 import * as MediaLibrary from 'expo-media-library';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from './api';
+
+const HISTORY_KEY = '@download_history';
 
 export interface DownloadTask {
   id: string;
@@ -36,6 +39,34 @@ class DownloadManagerClass {
   private progressCallbacks: Set<ProgressCallback> = new Set();
   private activeDownloads: Map<string, FileSystem.DownloadResumable> = new Map();
   private speedTrackers: Map<string, ReturnType<typeof setInterval>> = new Map();
+  private initialized: boolean = false;
+
+  constructor() {
+    this.loadPersistedTasks();
+  }
+
+  private async loadPersistedTasks() {
+    try {
+      const raw = await AsyncStorage.getItem(HISTORY_KEY);
+      if (raw) {
+        const saved: DownloadTask[] = JSON.parse(raw);
+        for (const task of saved) {
+          if (!this.tasks.has(task.id)) {
+            this.tasks.set(task.id, task);
+          }
+        }
+      }
+    } catch (e) { /* ignore */ }
+    this.initialized = true;
+  }
+
+  private async persistTasks() {
+    try {
+      const completed = Array.from(this.tasks.values())
+        .filter(t => ['completed', 'error', 'cancelled'].includes(t.status));
+      await AsyncStorage.setItem(HISTORY_KEY, JSON.stringify(completed));
+    } catch (e) { /* ignore */ }
+  }
 
   onProgress(callback: ProgressCallback): () => void {
     this.progressCallbacks.add(callback);
@@ -46,6 +77,10 @@ class DownloadManagerClass {
     this.progressCallbacks.forEach(cb => {
       try { cb({ ...task }); } catch (e) { /* ignore */ }
     });
+    // Auto-persist when task finishes
+    if (['completed', 'error', 'cancelled'].includes(task.status)) {
+      this.persistTasks();
+    }
   }
 
   /**
@@ -233,6 +268,19 @@ class DownloadManagerClass {
 
   removeTask(taskId: string): void {
     this.tasks.delete(taskId);
+    this.persistTasks();
+  }
+
+  clearAllTasks(): void {
+    // Keep only active downloads
+    const active: [string, DownloadTask][] = [];
+    for (const [id, task] of this.tasks) {
+      if (['extracting', 'downloading', 'saving'].includes(task.status)) {
+        active.push([id, task]);
+      }
+    }
+    this.tasks = new Map(active);
+    this.persistTasks();
   }
 
   private formatSpeed(bytesPerSec: number): string {

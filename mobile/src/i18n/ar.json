@@ -1,0 +1,101 @@
+{
+  "common": {
+    "cancel": "إلغاء",
+    "confirm": "تأكيد",
+    "delete": "حذف",
+    "save": "حفظ",
+    "close": "إغلاق",
+    "retry": "إعادة المحاولة",
+    "yes": "نعم",
+    "no": "لا",
+    "ok": "حسناً",
+    "enable": "تفعيل",
+    "loading": "جاري التحميل...",
+    "error": "خطأ",
+    "success": "نجاح",
+    "comingSoon": "قريباً"
+  },
+  "tabs": {
+    "home": "الرئيسية",
+    "playlist": "قوائم",
+    "history": "التحميلات",
+    "platforms": "المنصات",
+    "settings": "الإعدادات"
+  },
+  "home": {
+    "title": "Video Downloader",
+    "subtitle": "حمّل من أي منصة",
+    "fetchInfo": "جلب المعلومات",
+    "pasteUrl": "الصق رابط من أي منصة للبدء",
+    "supportedPlatforms": "YouTube • TikTok • Instagram • Twitter • +1800",
+    "videoQuality": "جودة الفيديو",
+    "audioQuality": "جودة الصوت",
+    "video": "فيديو",
+    "audio": "صوت",
+    "startDownload": "بدء التحميل",
+    "downloadNew": "تحميل جديد"
+  },
+  "download": {
+    "extracting": "🔗 جاري تحضير الرابط...",
+    "downloading": "📥 جاري التحميل...",
+    "saving": "💾 جاري الحفظ في المعرض...",
+    "completed": "✅ اكتمل التحميل!",
+    "error": "❌ فشل التحميل",
+    "cancelled": "🚫 تم الإلغاء",
+    "preparing": "⏳ جاري التحضير...",
+    "speed": "السرعة",
+    "eta": "الوقت المتبقي",
+    "cancelConfirm": "إلغاء التحميل",
+    "cancelMessage": "هل أنت متأكد؟"
+  },
+  "history": {
+    "title": "التحميلات",
+    "empty": "لا توجد تحميلات",
+    "emptySubtitle": "ابدأ بتحميل فيديو من الشاشة الرئيسية",
+    "active": "نشط",
+    "clearAll": "حذف الكل",
+    "clearConfirmTitle": "⚠️ حذف الكل",
+    "clearConfirmMessage": "هل أنت متأكد من حذف جميع السجلات؟",
+    "deleteConfirm": "نعم، احذف",
+    "play": "تشغيل",
+    "share": "مشاركة",
+    "openFile": "فتح الملف",
+    "fileNotFound": "الملف غير موجود على الجهاز"
+  },
+  "settings": {
+    "title": "⚙️ الإعدادات",
+    "defaultQuality": "🎚️ الجودة الافتراضية",
+    "videoLabel": "فيديو",
+    "audioLabel": "صوت MP3",
+    "appearance": "🎨 المظهر",
+    "theme": "السمة",
+    "themeSystem": "النظام",
+    "themeDark": "داكن",
+    "themeLight": "فاتح",
+    "language": "🌍 اللغة",
+    "languageLabel": "اللغة",
+    "permissions": "🔐 الصلاحيات",
+    "permStorage": "صلاحية التخزين",
+    "permStorageDesc": "مطلوبة لحفظ الملفات المحمّلة في المعرض",
+    "permNotifications": "الإشعارات",
+    "permNotificationsDesc": "لعرض تقدم التحميل وتنبيهات الاكتمال",
+    "permGranted": "مفعّلة",
+    "permDenied": "مرفوضة — اضغط للتفعيل",
+    "openSystemSettings": "فتح الإعدادات",
+    "updates": "📦 التحديثات",
+    "checkUpdates": "التحقق من التحديثات",
+    "currentVersion": "الإصدار الحالي",
+    "noUpdates": "أنت على أحدث إصدار",
+    "updateAvailable": "يوجد تحديث جديد!"
+  },
+  "permissions": {
+    "requestTitle": "صلاحيات مطلوبة",
+    "requestMessage": "يحتاج التطبيق إذنك لحفظ الملفات وإرسال الإشعارات.",
+    "storageDenied": "صلاحية التخزين مطلوبة لحفظ الفيديوهات على جهازك.",
+    "notificationsDenied": "صلاحية الإشعارات تساعد في متابعة تقدم التحميل."
+  },
+  "platforms": {
+    "title": "المنصات المدعومة",
+    "subtitle": "+1800 موقع مدعوم"
+  }
+}

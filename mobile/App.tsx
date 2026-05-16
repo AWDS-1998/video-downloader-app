@@ -1,6 +1,5 @@
 /**
- * Main App with Navigation + Share Intent Handler
- * المرجع: main_menu() L1169-1197
+ * Main App with Navigation + Share Intent + Theme + i18n + Permissions
  */
 
 import React, { useState, useEffect } from 'react';
@@ -12,16 +11,30 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { HomeScreen, HistoryScreen, SettingsScreen, PlaylistScreen, PlatformsScreen } from './src/screens';
 import { ShareDownloadSheet } from './src/components/ShareDownloadSheet';
-import { Colors } from './src/theme';
 import { isValidUrl } from './src/utils/platform';
+import { ThemeProvider, useTheme } from './src/contexts/ThemeContext';
+import { I18nProvider, useI18n } from './src/i18n';
+import { requestAllPermissions, hasRequestedPermissions } from './src/services/permissions';
 
 const Tab = createBottomTabNavigator();
 
-export default function App() {
+function AppContent() {
+  const { colors, isDark } = useTheme();
+  const { t } = useI18n();
   const [sharedUrl, setSharedUrl] = useState<string | null>(null);
   const [showShareSheet, setShowShareSheet] = useState(false);
 
-  // Handle share intent - app launched with shared URL
+  // Request permissions on first launch
+  useEffect(() => {
+    (async () => {
+      const alreadyRequested = await hasRequestedPermissions();
+      if (!alreadyRequested) {
+        await requestAllPermissions();
+      }
+    })();
+  }, []);
+
+  // Handle share intent
   useEffect(() => {
     const handleUrl = (event: { url: string }) => {
       const url = event.url;
@@ -31,7 +44,6 @@ export default function App() {
       }
     };
 
-    // Check initial URL (cold start from share)
     Linking.getInitialURL().then((url) => {
       if (url && isValidUrl(url)) {
         setSharedUrl(url);
@@ -39,24 +51,23 @@ export default function App() {
       }
     });
 
-    // Listen for URLs while app is open (warm start)
     const subscription = Linking.addEventListener('url', handleUrl);
     return () => subscription.remove();
   }, []);
 
   return (
-    <SafeAreaProvider>
-      <StatusBar style="light" />
+    <>
+      <StatusBar style={isDark ? 'light' : 'dark'} />
       <NavigationContainer
         theme={{
-          dark: true,
+          dark: isDark,
           colors: {
-            primary: Colors.primary,
-            background: Colors.background,
-            card: Colors.backgroundSecondary,
-            text: Colors.textPrimary,
-            border: Colors.border,
-            notification: Colors.accent,
+            primary: colors.primary,
+            background: colors.background,
+            card: colors.backgroundSecondary,
+            text: colors.textPrimary,
+            border: colors.border,
+            notification: colors.accent,
           },
           fonts: {
             regular: { fontFamily: 'System', fontWeight: '400' },
@@ -69,11 +80,11 @@ export default function App() {
         <Tab.Navigator
           screenOptions={({ route }) => ({
             headerShown: false,
-            tabBarActiveTintColor: Colors.primary,
-            tabBarInactiveTintColor: Colors.textTertiary,
+            tabBarActiveTintColor: colors.primary,
+            tabBarInactiveTintColor: colors.textTertiary,
             tabBarStyle: {
-              backgroundColor: Colors.backgroundSecondary,
-              borderTopColor: Colors.border,
+              backgroundColor: colors.backgroundSecondary,
+              borderTopColor: colors.border,
               borderTopWidth: 0.5,
               height: 60,
               paddingBottom: 8,
@@ -91,20 +102,31 @@ export default function App() {
             },
           })}
         >
-          <Tab.Screen name="Home" component={HomeScreen} options={{ tabBarLabel: 'الرئيسية' }} />
-          <Tab.Screen name="Playlist" component={PlaylistScreen} options={{ tabBarLabel: 'قوائم' }} />
-          <Tab.Screen name="History" component={HistoryScreen} options={{ tabBarLabel: 'التحميلات' }} />
-          <Tab.Screen name="Platforms" component={PlatformsScreen} options={{ tabBarLabel: 'المنصات' }} />
-          <Tab.Screen name="Settings" component={SettingsScreen} options={{ tabBarLabel: 'الإعدادات' }} />
+          <Tab.Screen name="Home" component={HomeScreen} options={{ tabBarLabel: t('tabs.home') }} />
+          <Tab.Screen name="Playlist" component={PlaylistScreen} options={{ tabBarLabel: t('tabs.playlist') }} />
+          <Tab.Screen name="History" component={HistoryScreen} options={{ tabBarLabel: t('tabs.history') }} />
+          <Tab.Screen name="Platforms" component={PlatformsScreen} options={{ tabBarLabel: t('tabs.platforms') }} />
+          <Tab.Screen name="Settings" component={SettingsScreen} options={{ tabBarLabel: t('tabs.settings') }} />
         </Tab.Navigator>
       </NavigationContainer>
 
-      {/* Share Intent Bottom Sheet */}
       <ShareDownloadSheet
         url={sharedUrl}
         visible={showShareSheet}
         onClose={() => { setShowShareSheet(false); setSharedUrl(null); }}
       />
+    </>
+  );
+}
+
+export default function App() {
+  return (
+    <SafeAreaProvider>
+      <ThemeProvider>
+        <I18nProvider>
+          <AppContent />
+        </I18nProvider>
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 }

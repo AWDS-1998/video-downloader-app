@@ -1,0 +1,101 @@
+{
+  "common": {
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "save": "Save",
+    "close": "Close",
+    "retry": "Retry",
+    "yes": "Yes",
+    "no": "No",
+    "ok": "OK",
+    "enable": "Enable",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "comingSoon": "Coming Soon"
+  },
+  "tabs": {
+    "home": "Home",
+    "playlist": "Playlists",
+    "history": "Downloads",
+    "platforms": "Platforms",
+    "settings": "Settings"
+  },
+  "home": {
+    "title": "Video Downloader",
+    "subtitle": "Download from any platform",
+    "fetchInfo": "Fetch Info",
+    "pasteUrl": "Paste a link from any platform to start",
+    "supportedPlatforms": "YouTube • TikTok • Instagram • Twitter • +1800",
+    "videoQuality": "Video Quality",
+    "audioQuality": "Audio Quality",
+    "video": "Video",
+    "audio": "Audio",
+    "startDownload": "Start Download",
+    "downloadNew": "New Download"
+  },
+  "download": {
+    "extracting": "🔗 Preparing download link...",
+    "downloading": "📥 Downloading...",
+    "saving": "💾 Saving to gallery...",
+    "completed": "✅ Download complete!",
+    "error": "❌ Download failed",
+    "cancelled": "🚫 Cancelled",
+    "preparing": "⏳ Preparing...",
+    "speed": "Speed",
+    "eta": "Time left",
+    "cancelConfirm": "Cancel Download",
+    "cancelMessage": "Are you sure?"
+  },
+  "history": {
+    "title": "Downloads",
+    "empty": "No downloads yet",
+    "emptySubtitle": "Start downloading from the home screen",
+    "active": "Active",
+    "clearAll": "Clear All",
+    "clearConfirmTitle": "⚠️ Clear All",
+    "clearConfirmMessage": "Are you sure you want to delete all records?",
+    "deleteConfirm": "Yes, delete",
+    "play": "Play",
+    "share": "Share",
+    "openFile": "Open File",
+    "fileNotFound": "File not found on device"
+  },
+  "settings": {
+    "title": "⚙️ Settings",
+    "defaultQuality": "🎚️ Default Quality",
+    "videoLabel": "Video",
+    "audioLabel": "Audio MP3",
+    "appearance": "🎨 Appearance",
+    "theme": "Theme",
+    "themeSystem": "System",
+    "themeDark": "Dark",
+    "themeLight": "Light",
+    "language": "🌍 Language",
+    "languageLabel": "Language",
+    "permissions": "🔐 Permissions",
+    "permStorage": "Storage Access",
+    "permStorageDesc": "Required to save downloaded files to your gallery",
+    "permNotifications": "Notifications",
+    "permNotificationsDesc": "Shows download progress and completion alerts",
+    "permGranted": "Granted",
+    "permDenied": "Denied — Tap to enable",
+    "openSystemSettings": "Open Settings",
+    "updates": "📦 Updates",
+    "checkUpdates": "Check for Updates",
+    "currentVersion": "Current Version",
+    "noUpdates": "You're on the latest version",
+    "updateAvailable": "Update available!"
+  },
+  "permissions": {
+    "requestTitle": "Permissions Required",
+    "requestMessage": "Video Downloader needs your permission to save files and send notifications.",
+    "storageDenied": "Storage permission is needed to save videos to your device.",
+    "notificationsDenied": "Notification permission helps track download progress."
+  },
+  "platforms": {
+    "title": "Supported Platforms",
+    "subtitle": "1800+ supported websites"
+  }
+}

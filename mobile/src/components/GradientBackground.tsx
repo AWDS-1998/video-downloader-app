@@ -1,28 +1,38 @@
 /**
  * GradientBackground Component
- * خلفية gradient للشاشات
+ * Theme-aware gradient background
  */
 
 import React from 'react';
-import { StyleSheet, ViewStyle } from 'react-native';
+import { StyleSheet, ViewStyle, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Colors } from '../theme';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface Props {
   children: React.ReactNode;
   style?: ViewStyle;
-  colors?: readonly [string, string, ...string[]];
 }
 
-export const GradientBackground: React.FC<Props> = ({
-  children,
-  style,
-  colors = Colors.gradients.header as unknown as readonly [string, string, ...string[]],
-}) => (
-  <LinearGradient colors={colors} style={[styles.container, style]}>
-    {children}
-  </LinearGradient>
-);
+export const GradientBackground: React.FC<Props> = ({ children, style }) => {
+  const { colors, isDark } = useTheme();
+
+  if (isDark) {
+    return (
+      <LinearGradient
+        colors={[colors.background, colors.backgroundSecondary, colors.backgroundTertiary]}
+        style={[styles.container, style]}
+      >
+        {children}
+      </LinearGradient>
+    );
+  }
+
+  return (
+    <View style={[styles.container, { backgroundColor: colors.background }, style]}>
+      {children}
+    </View>
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
