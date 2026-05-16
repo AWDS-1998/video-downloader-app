@@ -43,7 +43,7 @@ const DarkColors = {
   overlay: 'rgba(0, 0, 0, 0.5)',
   shimmerBase: '#232340',
   shimmerHighlight: '#2D2D50',
-  statusBar: 'light' as const,
+  statusBar: 'light' as 'light' | 'dark',
 };
 
 // Light colors
@@ -79,7 +79,7 @@ const LightColors = {
   overlay: 'rgba(0, 0, 0, 0.3)',
   shimmerBase: '#E8EAF0',
   shimmerHighlight: '#F5F6FA',
-  statusBar: 'dark' as const,
+  statusBar: 'dark' as 'light' | 'dark',
 };
 
 export type ThemeColors = typeof DarkColors;

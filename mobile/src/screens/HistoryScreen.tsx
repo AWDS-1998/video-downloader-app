@@ -16,7 +16,7 @@ import { Spacing, BorderRadius, Typography } from '../theme';
 import { GradientBackground, EmptyState, FadeInView } from '../components';
 import { useTheme } from '../contexts/ThemeContext';
 import { useI18n } from '../i18n';
-import downloadManager, { DownloadTask, DownloadManagerClass } from '../services/downloadManager';
+import downloadManager, { DownloadTask, DownloadManager } from '../services/downloadManager';
 
 export const HistoryScreen: React.FC = () => {
   const { colors } = useTheme();
@@ -113,7 +113,7 @@ export const HistoryScreen: React.FC = () => {
     const statusInfo = getStatusIcon(item.status);
     const isActive = ['extracting', 'downloading', 'saving'].includes(item.status);
     const isCompleted = item.status === 'completed';
-    const fileSize = DownloadManagerClass.formatSize(item.filesize || item.downloadedBytes);
+    const fileSize = DownloadManager.formatSize(item.filesize || item.downloadedBytes);
 
     return (
       <FadeInView delay={index * 40}>

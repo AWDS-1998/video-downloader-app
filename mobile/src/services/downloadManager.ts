@@ -233,7 +233,7 @@ class DownloadManagerClass {
         throw new Error('فشل حفظ الملف');
       }
     } catch (error: any) {
-      if (task.status !== 'paused' && task.status !== 'cancelled') {
+      if (task.status !== 'cancelled') {
         task.status = 'error';
         task.error = error.message || 'خطأ في التحميل';
       }
