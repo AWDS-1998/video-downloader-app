@@ -575,6 +575,137 @@ function getAvailableFormats(url, cookies = null) {
   });
 }
 
+/**
+ * استخراج روابط التحميل المباشرة (بدون تحميل)
+ * يرجع URLs مباشرة من CDN للتحميل من الجوال
+ */
+function extractDirectUrls(url, options = {}) {
+  const { quality = 'best', type = 'video' } = options;
+
+  return new Promise((resolve, reject) => {
+    const args = [
+      '--dump-json',
+      '--no-warnings',
+      '--no-download',
+      '--no-playlist',
+      '--remote-components', 'ejs:github',
+    ];
+
+    // استخدام ملف الكوكيز المحلي تلقائياً
+    if (fs.existsSync(COOKIES_FILE)) {
+      args.push('--cookies', COOKIES_FILE);
+    }
+
+    // تحديد الصيغة حسب النوع والجودة
+    if (type === 'audio') {
+      args.push('-f', 'bestaudio');
+    } else {
+      if (quality === 'best' || !quality) {
+        args.push('-f', 'bestvideo+bestaudio/best');
+      } else if (/^\d+$/.test(quality) && parseInt(quality) >= 144) {
+        args.push('-f', `bestvideo[height<=${quality}]+bestaudio/best[height<=${quality}]`);
+      } else {
+        args.push('-f', `${quality}+bestaudio/${quality}/best`);
+      }
+    }
+
+    args.push(url);
+
+    logInfo(`[Extract] Getting direct URLs: ${url}`);
+    const startTime = Date.now();
+    const proc = spawn('yt-dlp', args);
+
+    let stdout = '';
+    let stderr = '';
+
+    proc.stdout.on('data', (data) => { stdout += data.toString(); });
+    proc.stderr.on('data', (data) => { stderr += data.toString(); });
+
+    proc.on('close', (code) => {
+      const elapsed = Date.now() - startTime;
+
+      if (code !== 0) {
+        logError(`[Extract] Failed: ${stderr}`);
+        reject(new Error(stderr || 'Failed to extract URLs'));
+        return;
+      }
+
+      try {
+        const info = JSON.parse(stdout);
+
+        // استخراج روابط التحميل المباشرة
+        const directUrls = [];
+
+        // الرابط الأساسي (المدمج أو الأفضل)
+        if (info.url) {
+          directUrls.push({
+            type: 'combined',
+            url: info.url,
+            ext: info.ext || 'mp4',
+            filesize: info.filesize || info.filesize_approx || 0,
+            quality: info.format_note || info.resolution || 'best',
+            headers: info.http_headers || {},
+          });
+        }
+
+        // روابط الفيديو والصوت المنفصلة (adaptive)
+        if (info.requested_formats) {
+          for (const f of info.requested_formats) {
+            directUrls.push({
+              type: f.vcodec !== 'none' ? 'video' : 'audio',
+              url: f.url,
+              ext: f.ext,
+              filesize: f.filesize || f.filesize_approx || 0,
+              quality: f.format_note || f.resolution || '',
+              height: f.height || 0,
+              width: f.width || 0,
+              bitrate: f.tbr || f.abr || 0,
+              codec: f.vcodec !== 'none' ? f.vcodec : f.acodec,
+              headers: f.http_headers || {},
+            });
+          }
+        }
+
+        // جلب كل الصيغ المتاحة للاختيار
+        const allFormats = (info.formats || [])
+          .filter(f => f.url && (f.vcodec !== 'none' || f.acodec !== 'none'))
+          .map(f => ({
+            itag: f.format_id,
+            url: f.url,
+            ext: f.ext,
+            quality: f.format_note || f.resolution || '',
+            height: f.height || 0,
+            filesize: f.filesize || f.filesize_approx || 0,
+            isVideo: f.vcodec !== 'none',
+            isAudio: f.acodec !== 'none' && f.vcodec === 'none',
+            isCombined: f.vcodec !== 'none' && f.acodec !== 'none',
+            headers: f.http_headers || {},
+          }));
+
+        const result = {
+          id: info.id,
+          title: info.title || 'Unknown',
+          thumbnail: info.thumbnail || '',
+          duration: info.duration || 0,
+          directUrls,
+          allFormats,
+          _extractedIn: `${elapsed}ms`,
+        };
+
+        logSuccess(`[Extract] Got ${directUrls.length} direct URLs in ${elapsed}ms`);
+        resolve(result);
+      } catch (e) {
+        logError(`[Extract] Parse error: ${e.message}`);
+        reject(new Error('Failed to parse extracted URLs'));
+      }
+    });
+
+    proc.on('error', (err) => {
+      reject(err);
+    });
+  });
+}
+
 module.exports = {
   checkRequirements,
   getVideoInfo,
@@ -584,5 +715,6 @@ module.exports = {
   getDownloadStatus,
   getAllDownloads,
   getAvailableFormats,
+  extractDirectUrls,
   DOWNLOADS_DIR,
 };

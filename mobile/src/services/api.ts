@@ -112,6 +112,14 @@ class ApiService {
     });
   }
 
+  // استخراج روابط التحميل المباشرة
+  async extractDirectUrls(url: string, quality?: string, type?: string) {
+    return this.request('/api/extract', {
+      method: 'POST',
+      body: JSON.stringify({ url, quality, type }),
+    });
+  }
+
   // المنصات المدعومة - المرجع: show_supported_platforms() L1142-1164
   async getPlatforms() {
     return this.request('/api/platforms');

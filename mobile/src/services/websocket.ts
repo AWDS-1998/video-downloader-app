@@ -9,7 +9,7 @@ class WebSocketService {
   private ws: WebSocket | null = null;
   private handlers: Map<string, Set<MessageHandler>> = new Map();
   private reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
-  private serverUrl: string = 'ws://192.168.1.100:3000/ws';
+  private serverUrl: string = 'wss://misbartube.lnkub.com/ws';
   private isConnecting: boolean = false;
 
   setServerUrl(url: string) {

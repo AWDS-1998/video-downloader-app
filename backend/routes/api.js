@@ -239,6 +239,56 @@ router.post('/formats', async (req, res) => {
 });
 
 /**
+ * POST /api/extract - استخراج روابط التحميل المباشرة
+ * يرجع روابط CDN المباشرة للجوال ليحمّل منها مباشرة
+ * هذا هو أسلوب Snaptube / TubeMate
+ */
+router.post('/extract', async (req, res) => {
+  const { url, quality, type } = req.body;
+
+  if (!url || !validateUrl(url)) {
+    return res.status(400).json({ error: 'رابط غير صالح' });
+  }
+
+  if (activeRequests >= MAX_CONCURRENT) {
+    return res.status(429).json({ error: 'السيرفر مشغول، حاول مرة أخرى بعد قليل' });
+  }
+
+  activeRequests++;
+
+  try {
+    // تحقق من الكاش
+    const cacheKey = `extract:${url}:${quality || 'best'}:${type || 'video'}`;
+    const cached = videoInfoCache.get(cacheKey);
+    if (cached) {
+      activeRequests--;
+      return res.json({ ...cached, _cached: true });
+    }
+
+    const platform = detectPlatform(url);
+
+    // استخدام yt-dlp لاستخراج الروابط المباشرة فقط (بدون تحميل)
+    const extractedUrls = await downloader.extractDirectUrls(url, {
+      quality: quality || 'best',
+      type: type || 'video',
+    });
+
+    // تخزين في الكاش (3 ساعات - الروابط تنتهي بعد 6 ساعات تقريباً)
+    videoInfoCache.set(cacheKey, extractedUrls, 10800);
+
+    activeRequests--;
+    res.json({ ...extractedUrls, platform });
+  } catch (err) {
+    activeRequests--;
+    logger.logError(`API /extract error: ${err.message}`);
+    res.status(500).json({
+      error: 'فشل استخراج رابط التحميل',
+      details: err.message,
+    });
+  }
+});
+
+/**
  * GET /api/logs - إدارة السجلات
  * المرجع: mode_logs_manager() L1051-1137
  */
