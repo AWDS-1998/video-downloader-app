@@ -138,9 +138,13 @@ class DownloadManagerClass {
         playlistItems: null,
       });
 
-      task.serverDownloadId = response.id;
+      // ⚠️ السيرفر يرجع downloadId وليس id
+      task.serverDownloadId = response.downloadId || response.id;
       task.status = 'downloading';
       this.notifyProgress(task);
+
+      // Polling fallback: لو WebSocket ما أرسل تحديثات، نسأل السيرفر مباشرة
+      this.startPolling(task);
 
       return taskId;
     } catch (error: any) {
@@ -197,6 +201,49 @@ class DownloadManagerClass {
       task.error = 'فشل حفظ الملف: ' + (error.message || '');
       this.notifyProgress(task);
     }
+  }
+
+  /**
+   * Polling: يسأل السيرفر كل 3 ثواني عن حالة التحميل
+   * كإحتياط لو WebSocket ما وصلت التحديثات
+   */
+  private startPolling(task: DownloadTask) {
+    const pollInterval = setInterval(async () => {
+      if (!task.serverDownloadId || 
+          task.status === 'completed' || 
+          task.status === 'error' || 
+          task.status === 'cancelled') {
+        clearInterval(pollInterval);
+        return;
+      }
+
+      try {
+        const status = await api.getDownloadStatus(task.serverDownloadId);
+        if (!status) return;
+
+        task.progress = status.progress || task.progress;
+        task.speedText = status.speed || task.speedText;
+        task.eta = status.eta || task.eta;
+        task.filename = status.filename || task.filename;
+
+        if (status.status === 'completed') {
+          clearInterval(pollInterval);
+          task.status = 'saving';
+          this.notifyProgress(task);
+          this.saveFileToPhone(task, status);
+        } else if (status.status === 'error') {
+          clearInterval(pollInterval);
+          task.status = 'error';
+          task.error = status.error || 'فشل التحميل';
+          this.notifyProgress(task);
+        } else {
+          task.status = 'downloading';
+          this.notifyProgress(task);
+        }
+      } catch (e) {
+        // تجاهل أخطاء الشبكة
+      }
+    }, 3000);
   }
 
   /**
